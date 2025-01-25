@@ -5,7 +5,7 @@ function App() {
   const [_, setWs] = useState<WebSocket | undefined>(undefined);
 
   function connect() {
-    const temp = new WebSocket("ws://10.246.176.24:6969/ws");
+    const temp = new WebSocket(`ws://${window.location.host}/ws`);
     temp.onopen = () => console.log("Open");
     temp.onmessage = onMessage;
     setWs(temp);
@@ -15,7 +15,7 @@ function App() {
     console.log(messageJSON.data);
   }
 
-  return (              
+  return (
     <>
       <button onClick={connect}>Connect</button>
       <Editor
