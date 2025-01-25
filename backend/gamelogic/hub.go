@@ -1,11 +1,12 @@
 package gamelogic
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
-    m "leet-guys/messages"
+	m "leet-guys/messages"
 )
 
 var cId int = 0
@@ -31,17 +32,34 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    queryParams := r.URL.Query()
+	queryParams := r.URL.Query()
 
-    name := queryParams.Get("name")
+	name := queryParams.Get("name")
 
-    c := &client{
-        id: cId,
-        name: name,
-        conn: conn,
-    }
+	fmt.Println("name:", name)
+
+	c := &client{
+		id:   cId,
+		name: name,
+		conn: conn,
+	}
+
+	var cmw m.ClientMessageWrapper
+
+	err = c.conn.ReadJSON(&cmw)
+	if err != nil {
+		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			c.log("error: %v", err)
+		}
+		return
+	}
+
+	if cmw.Type != m.ClientMessageTypeReady {
+		c.log("Not ready type")
+		return
+	}
 
 	conn.WriteJSON(m.NewHubGreetingMessage(c.playerInfo()))
 
-    cId++
+	cId++
 }
