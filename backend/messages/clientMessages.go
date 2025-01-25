@@ -7,6 +7,7 @@ import (
 type ClientMessageType string
 
 const (
+	ClientMessageTypeReady      = "ClientMessageReady"
 	ClientMessageTypeClientQuit = "ClientMessageClientQuit"
 	ClientMessageTypeSubmit     = "ClientMessageSubmit"
 )
@@ -19,6 +20,12 @@ type ClientMessageWrapper struct {
 	Type ClientMessageType `json:"type"`
 	Data json.RawMessage   `json:"data"`
 }
+
+type ReadyMessage struct {
+    Type ClientMessageType `json:"type"`
+}
+
+func (m ReadyMessage) clientMessage() {}
 
 type ClientQuitMessage struct {
 	PlayerId int `json:"playerId"`
