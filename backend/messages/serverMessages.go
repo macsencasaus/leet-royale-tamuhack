@@ -6,6 +6,8 @@ const (
 	ServerMessageTypeHubGreeting   = "ServerMessageHubGreeting"
 	ServerMessageTypeLobbyGreeting = "ServerMessageLobbyGreeting"
 	ServerMessageCountdown         = "ServerMessageCountdown"
+	ServerMessageClientJoined      = "ServerMessageClientJoined"
+	ServerMessageClientLeft        = "ServerMessageClientLeft"
 	ServerMessageRoundStart        = "ServerMessageRoundStart"
 	ServerMessageRoundEnd          = "ServerMessageRoundEnd"
 	ServerMessageTestPassed        = "ServerMessageTestPassed"
@@ -17,26 +19,29 @@ type ServerMessage interface {
 }
 
 type HubGreetingMessage struct {
-	Type ServerMessageType `json:"type"`
+	Type   ServerMessageType `json:"type"`
+	Player PlayerInfo        `json:"player"`
 }
 
-func NewHubGreetingMessage() HubGreetingMessage {
+func NewHubGreetingMessage(p PlayerInfo) HubGreetingMessage {
 	return HubGreetingMessage{
-		Type: ServerMessageTypeHubGreeting,
+		Type:   ServerMessageTypeHubGreeting,
+		Player: p,
 	}
 }
 func (m HubGreetingMessage) serverMessage() {}
 
 type LobbyGreetingMessage struct {
-	Type    ServerMessageType `json:"type"`
-	LobbyId int               `json:"lobbyId"`
-	// TODO: add other players
+	Type         ServerMessageType `json:"type"`
+	LobbyId      int               `json:"lobbyId"`
+	OtherPlayers []PlayerInfo      `json:"otherPlayers"`
 }
 
-func NewLobbyGreetingMessage(lobbyId int) LobbyGreetingMessage {
+func NewLobbyGreetingMessage(lobbyId int, otherPlayers []PlayerInfo) LobbyGreetingMessage {
 	return LobbyGreetingMessage{
-		Type:    ServerMessageTypeLobbyGreeting,
-		LobbyId: lobbyId,
+		Type:         ServerMessageTypeLobbyGreeting,
+		LobbyId:      lobbyId,
+		OtherPlayers: otherPlayers,
 	}
 }
 func (m LobbyGreetingMessage) serverMessage() {}
@@ -46,7 +51,7 @@ type CountdownMessage struct {
 	Count int               `json:"count"`
 }
 
-func NewMessageCountdownMessage(count int) CountdownMessage {
+func NewCountdownMessage(count int) CountdownMessage {
 	return CountdownMessage{
 		Type:  ServerMessageCountdown,
 		Count: count,
@@ -54,15 +59,43 @@ func NewMessageCountdownMessage(count int) CountdownMessage {
 }
 func (m CountdownMessage) serverMessage() {}
 
+type ClientJoinedMessage struct {
+	Type   ServerMessageType `json:"type"`
+	Player PlayerInfo        `json:"player"`
+}
+
+func NewClientJoinedMessage(player PlayerInfo) ClientJoinedMessage {
+	return ClientJoinedMessage{
+		Type:   ServerMessageClientJoined,
+		Player: player,
+	}
+}
+func (m ClientJoinedMessage) serverMessage() {}
+
+type ClientLeftMessage struct {
+	Type   ServerMessageType `json:"type"`
+	Player PlayerInfo        `json:"player"`
+}
+
+func NewClientLeftMessage(player PlayerInfo) ClientLeftMessage {
+	return ClientLeftMessage{
+		Type:   ServerMessageClientLeft,
+		Player: player,
+	}
+}
+func (m ClientLeftMessage) serverMessage() {}
+
 type RoundStartMessage struct {
 	Type  ServerMessageType `json:"type"`
 	Round int               `json:"round"`
+	Time  int               `json:"time"`
 }
 
-func NewRoundStartMessage(round int) RoundStartMessage {
+func NewRoundStartMessage(round int, sec int) RoundStartMessage {
 	return RoundStartMessage{
 		Type:  ServerMessageRoundStart,
 		Round: round,
+		Time:  sec,
 	}
 }
 func (m RoundStartMessage) serverMessage() {}
@@ -83,7 +116,6 @@ func (m RoundEndMessage) serverMessage() {}
 type TestPassedMessage struct {
 	Type     ServerMessageType `json:"type"`
 	Question string            `json:"question"`
-	// TODO: maybe add more info about length taken
 }
 
 func NewTestPassedMessage(question string) TestPassedMessage {
@@ -97,7 +129,7 @@ func (m TestPassedMessage) serverMessage() {}
 type TestFailedMessage struct {
 	Type     ServerMessageType `json:"type"`
 	Question string            `json:"question"`
-    // TODO: add failure reason
+	// TODO: add failure reason
 }
 
 func NewTestFailedMessage(question string) TestFailedMessage {
@@ -107,3 +139,8 @@ func NewTestFailedMessage(question string) TestFailedMessage {
 	}
 }
 func (m TestFailedMessage) servermessage() {}
+
+type PlayerInfo struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
