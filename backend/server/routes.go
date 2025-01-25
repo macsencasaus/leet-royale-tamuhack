@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/websocket"
 	"leet-guys/gamelogic"
 )
 
@@ -24,8 +23,4 @@ func routes() *http.ServeMux {
 	mux.HandleFunc("/ws", hub.ServeWs)
 
 	return mux
-}
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
 }
