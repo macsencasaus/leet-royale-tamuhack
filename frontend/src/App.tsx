@@ -1,8 +1,8 @@
-import { useState } from "react"
-
+import { useState } from "react";
+import Editor from "@monaco-editor/react";
 
 function App() {
-  const [ws, setWs] = useState<WebSocket | undefined>(undefined);
+  const [_, setWs] = useState<WebSocket | undefined>(undefined);
 
   function connect() {
     const temp = new WebSocket("ws://10.246.176.24:6969/ws");
@@ -15,11 +15,18 @@ function App() {
     console.log(messageJSON.data);
   }
 
-  return (
-    <button onClick={connect}>
-      Connect
-    </button>
-  )
+  return (              
+    <>
+      <button onClick={connect}>Connect</button>
+      <Editor
+        height="90vh"
+        width="90dvw"
+        defaultLanguage="javascript"
+        theme="vs-dark"
+        defaultValue="// some comment"
+      />
+    </>
+  );
 }
 
-export default App
+export default App;
