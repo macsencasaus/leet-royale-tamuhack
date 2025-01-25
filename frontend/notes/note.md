@@ -19,3 +19,6 @@
 - Initial connection and send username
 - Move to waiting screen
 - Move to programming
+
+# Fix
+- Have the server wait for a "ready" signal from the client"

@@ -1,5 +1,6 @@
 import { useContext, useEffect } from "react";
 import { WebSocketContext } from "./context";
+import { MessageType } from "@/lib/types";
 
 function useWebSocket(onMessage?: (message: any) => void) {
 	const { connected, setConnected, webSocket, setWebSocket } =
@@ -30,9 +31,19 @@ function useWebSocket(onMessage?: (message: any) => void) {
 		setWebSocket(ws);
 	}
 
+	function sendMessage(type: MessageType, data?: Record<string, any>) {
+		const message = {
+			type,
+			data,
+		};
+
+		webSocket?.send(JSON.stringify(message));
+	}
+
 	return {
 		connected,
 		webSocket,
+		sendMessage,
 		createWebSocket,
 	};
 }
