@@ -10,4 +10,7 @@ front:
 fmt:
 	cd backend && gofmt -l -s -w .
 
-.PHONY: run front build fmt
+clean:
+	rm backend/leet-guys
+
+.PHONY: run front build fmt clean
