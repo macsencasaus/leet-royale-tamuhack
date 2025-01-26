@@ -1,6 +1,6 @@
 import { Languages, Message, Templates } from "@/lib/types";
 import _Editor from "@monaco-editor/react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Send, SkipForward } from "lucide-react";
 import { Button } from "./ui/button";
@@ -8,20 +8,46 @@ import useWebSocket from "@/hooks/useWebSocket";
 import { demo } from "@/config";
 
 function EditorPanel() {
-	const { sendMessage } = useWebSocket(onMessage);
-	const [templates, setTemplates] = useState<Templates>({
-		python: "# Python Template",
-		javascript: "// JavaScript Template",
-		cpp: "// C++ Template",
-	});
+	const [templates, setTemplates] = useState<Templates | undefined>(
+		undefined
+	);
 	const [language, setLanguage] = useState<Languages>("javascript");
+	const [code, setCode] = useState<Record<Languages, string>>({
+		javascript: "",
+		python: "",
+		cpp: "",
+	});
 
-	function onMessage(message: Message) {
+	const onMessage = useCallback((message: Message) => {
 		switch (message.type) {
 			case "ServerMessageRoundStart":
 				setTemplates(message.templates);
 				break;
+			case "ServerMessageRoundEnd":
+				setTemplates(undefined);
+				break;
 		}
+	}, []);
+
+	const { player, sendMessage } = useWebSocket(onMessage);
+
+	function onCode(code: string | undefined) {
+		setCode((prev) => {
+			return {
+				...prev,
+				language: code,
+			};
+		});
+	}
+
+	function submitCode() {
+		sendMessage("ClientMessageSubmit", {
+			data: {
+				playerId: player?.id,
+				language,
+				code: code[language],
+			},
+		});
 	}
 
 	function skipQuestion() {
@@ -52,55 +78,87 @@ function EditorPanel() {
 					<Button
 						variant={"outline"}
 						style={{ backgroundColor: "rgba(25, 135, 84, .5)" }}
+						onClick={submitCode}
 					>
 						<Send /> Submit
 					</Button>
 				</div>
 			</div>
 
-			<div className="py-2 overflow-hidden grow">
-				<div className="-ml-8 h-full">
-					<TabsContent
-						value="javascript"
-						className="h-full"
-					>
-						<_Editor
-							height="100%"
-							width="100%"
-							defaultLanguage="javascript"
-							theme="vs-dark"
-							defaultValue={templates.javascript}
-							className="rounded"
-						/>
-					</TabsContent>
-					<TabsContent
-						value="python"
-						className="h-full"
-					>
-						<_Editor
-							height="100%"
-							width="100%"
-							defaultLanguage="python"
-							theme="vs-dark"
-							defaultValue={templates.python}
-							className="rounded"
-						/>
-					</TabsContent>
-					<TabsContent
-						value="cpp"
-						className="h-full"
-					>
-						<_Editor
-							height="100%"
-							width="100%"
-							defaultLanguage="c++"
-							language={language}
-							theme="vs-dark"
-							defaultValue={templates.cpp}
-							className="rounded"
-						/>
-					</TabsContent>
-				</div>
+			<div className="py-4 px-2 overflow-hidden grow">
+				{templates ? (
+					<div className="-ml-8 h-full">
+						<TabsContent
+							value="javascript"
+							className="h-full"
+							forceMount
+							style={{
+								display:
+									language !== "javascript"
+										? "none"
+										: undefined,
+							}}
+						>
+							<_Editor
+								height="100%"
+								width="100%"
+								defaultLanguage="javascript"
+								theme="vs-dark"
+								defaultValue={templates.javascript}
+								className="rounded"
+								value={code["javascript"]}
+								onChange={onCode}
+							/>
+						</TabsContent>
+						<TabsContent
+							value="python"
+							className="h-full"
+							forceMount
+							style={{
+								display:
+									language !== "python" ? "none" : undefined,
+							}}
+						>
+							<_Editor
+								height="100%"
+								width="100%"
+								defaultLanguage="python"
+								theme="vs-dark"
+								defaultValue={templates.python}
+								className="rounded"
+								value={code["python"]}
+								onChange={onCode}
+							/>
+						</TabsContent>
+						<TabsContent
+							value="cpp"
+							className="h-full"
+							forceMount
+							style={{
+								display:
+									language !== "cpp" ? "none" : undefined,
+							}}
+						>
+							<_Editor
+								height="100%"
+								width="100%"
+								defaultLanguage="c++"
+								language={language}
+								theme="vs-dark"
+								defaultValue={templates.cpp}
+								className="rounded"
+								value={code["cpp"]}
+								onChange={onCode}
+							/>
+						</TabsContent>
+					</div>
+				) : (
+					<p>
+						Hold your horses,{" "}
+						<span className="font-bold">{player?.name}</span>. The
+						round hasn't started yet.
+					</p>
+				)}
 			</div>
 		</Tabs>
 	);
