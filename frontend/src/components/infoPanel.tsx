@@ -1,19 +1,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { debug } from "@/config";
 import useWebSocket from "@/hooks/useWebSocket";
 import { Message } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 function InfoPanel() {
-	const debug = true;
-	const { sendMessage } = useWebSocket(onMessage);
+	useWebSocket(onMessage);
 	const [messages, setMessages] = useState<string[]>([]);
 
-	useEffect(() => {
-		sendMessage("ClientMessageReady");
-	});
-
 	function onMessage(message: Message) {
-		console.log(message);
 		const next = messages.concat([JSON.stringify(message)]);
 		setMessages(next);
 	}
