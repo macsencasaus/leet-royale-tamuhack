@@ -10,6 +10,7 @@ function useWebSocket(onMessage?: (message: any) => void) {
 		setConnected,
 		webSocket,
 		setWebSocket,
+		player,
 		setPlayer,
 	} = useContext(WebSocketContext);
 
@@ -64,6 +65,7 @@ function useWebSocket(onMessage?: (message: any) => void) {
 
 	return {
 		gameState,
+		player,
 		connected,
 		webSocket,
 		sendMessage,

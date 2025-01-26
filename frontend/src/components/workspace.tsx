@@ -7,15 +7,14 @@ import EditorPanel from "./editorPanel";
 import InfoPanel from "./infoPanel";
 import HeaderPanel from "./headerPanel";
 import useWebSocket from "@/hooks/useWebSocket";
-// import { debug } from "@/config";
 
-function Workspace() {
+function Workspace({ force }: { force?: boolean }) {
 	const { gameState } = useWebSocket();
 
 	return (
 		<div
 			className={`flex flex-col gap-1 h-full ${
-				gameState !== "workspace" ? "hidden" : ""
+				gameState !== "workspace" && !force ? "hidden" : ""
 			}`}
 		>
 			<HeaderPanel />
