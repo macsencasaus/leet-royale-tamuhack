@@ -100,19 +100,19 @@ func TestRunProblemTest_happy(t *testing.T) {
         ;
     }
     `
-	res , err := RunProblemTest([]byte(file), CPP)
+	res, err := RunProblemTest([]byte(file), CPP)
 	if err != nil {
 		t.Errorf("Err was non-nil: %v\n", err)
 	}
-    if res.Issue != Success {
+	if res.Issue != Success {
 		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", res.Issue)
-    }
-    if res.NCasesRun != 2 {
-        t.Errorf("Incorrect number of parsed cases (%d) expected %d\n", res.NCasesRun, 2)
-    }
-    for i := 0; i < res.NCasesRun; i++ {
-        if res.PFStatus[i] != AC {
-            t.Errorf("Parsed incorrect case status '%s' expected '%s'\n", res.PFStatus[i], AC)
-        }
-    }
+	}
+	if res.NCasesRun != 2 {
+		t.Errorf("Incorrect number of parsed cases (%d) expected %d\n", res.NCasesRun, 2)
+	}
+	for i := 0; i < res.NCasesRun; i++ {
+		if res.PFStatus[i] != AC {
+			t.Errorf("Parsed incorrect case status '%s' expected '%s'\n", res.PFStatus[i], AC)
+		}
+	}
 }

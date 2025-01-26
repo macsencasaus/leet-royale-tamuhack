@@ -43,17 +43,17 @@ type Result struct {
 }
 
 func statusFromCode(letters []byte) TestCaseStatus {
-    if bytes.Compare(letters, []byte("AC")) == 0 {
-        return AC
-    } else if bytes.Compare(letters, []byte("WA")) == 0 {
-        return WA
-    } else if bytes.Compare(letters, []byte("RE")) == 0 {
-        return RE
-    } else if bytes.Compare(letters, []byte("TLE")) == 0 {
-        return TLE
-    }
-    log.Fatalf("Invalid test case status conversion from '%s'", letters)
-    return AC
+	if bytes.Compare(letters, []byte("AC")) == 0 {
+		return AC
+	} else if bytes.Compare(letters, []byte("WA")) == 0 {
+		return WA
+	} else if bytes.Compare(letters, []byte("RE")) == 0 {
+		return RE
+	} else if bytes.Compare(letters, []byte("TLE")) == 0 {
+		return TLE
+	}
+	log.Fatalf("Invalid test case status conversion from '%s'", letters)
+	return AC
 }
 
 func generateMagic() int64 {
@@ -137,7 +137,7 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 
 // Expects in the format `STDOUT` "\n" `MAGIC` "\n" `INFO` "\n" `MAGIC` "\n" ...
 func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
-    magic := generateMagic()
+	magic := generateMagic()
 	magicString := fmt.Sprintf("\n%d\n", magic)
 
 	var streamOut []byte
@@ -160,24 +160,20 @@ func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
 	var testCaseProgramOut [][]byte
 	var testCaseStatus []TestCaseStatus
 
-    if stage == Compile || stage == CompileTime {
-        testCaseProgramOut = append(testCaseProgramOut, streamOut)
-        return Result{stage, 0, testCaseProgramOut, nil}, nil
-    }
+	if stage == Compile || stage == CompileTime {
+		testCaseProgramOut = append(testCaseProgramOut, streamOut)
+		return Result{stage, 0, testCaseProgramOut, nil}, nil
+	}
 
-    var sections [][]byte = bytes.Split(streamOut, []byte(magicString))
-    for i := 0; i < len(sections); i += 2 {
-        if len(sections[i]) == 0 {
-            continue
-        }
-        testCasesRun++
-        testCaseProgramOut = append(testCaseProgramOut, sections[i])
-        testCaseStatus = append(testCaseStatus, statusFromCode(sections[i+1]))
-    }
-
-    for i := 0; i < 2; i++ {
-        log.Println(testCaseProgramOut[i], testCaseStatus[i])
-    }
+	var sections [][]byte = bytes.Split(streamOut, []byte(magicString))
+	for i := 0; i < len(sections); i += 2 {
+		if len(sections[i]) == 0 {
+			continue
+		}
+		testCasesRun++
+		testCaseProgramOut = append(testCaseProgramOut, sections[i])
+		testCaseStatus = append(testCaseStatus, statusFromCode(sections[i+1]))
+	}
 
 	return Result{stage, testCasesRun, testCaseProgramOut, testCaseStatus}, nil
 }
