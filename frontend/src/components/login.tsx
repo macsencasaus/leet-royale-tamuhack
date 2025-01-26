@@ -15,15 +15,16 @@ function Login() {
 	const { createWebSocket } = useWebSocket();
 	const [name, setName] = useState("");
 
-	function connect() {
+	function connect(ev: any) {
+		ev.preventDefault();
 		const address = `ws://${window.location.host}/ws?name=${name}`;
 		console.log(`Sending connection request to ${address}`);
 		createWebSocket(address);
 	}
 
 	return (
-		<div className="flex justify-center h-dvh items-center">
-			<Card className="max-w-screen-lg">
+		<form className="flex justify-center h-dvh items-center" onSubmit={connect}>
+			<Card className="w-screen max-w-xs">
 				<CardHeader>
 					<CardTitle>LeetGuys</CardTitle>
 					<CardDescription>
@@ -47,7 +48,7 @@ function Login() {
 					</Button>
 				</CardFooter>
 			</Card>
-		</div>
+		</form>
 	);
 }
 
