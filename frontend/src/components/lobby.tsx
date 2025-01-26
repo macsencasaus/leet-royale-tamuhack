@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { SkipForward } from "lucide-react";
+import Rules from "./rules";
 
 function Lobby({ force }: { force?: boolean }) {
 	const [lobbyId, setLobbyId] = useState(-1);
@@ -50,7 +51,7 @@ function Lobby({ force }: { force?: boolean }) {
 
 	return (
 		<div
-			className={`flex justify-center h-full items-center ${
+			className={`flex gap-2 justify-center h-full items-center ${
 				gameState !== "lobby" && !force ? "hidden" : ""
 			}`}
 		>
@@ -111,6 +112,7 @@ function Lobby({ force }: { force?: boolean }) {
 					</div>
 				</CardFooter>
 			</Card>
+			<Rules />
 		</div>
 	);
 }

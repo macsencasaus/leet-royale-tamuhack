@@ -1,8 +1,9 @@
 import useWebSocket from "@/hooks/useWebSocket";
 import { Message, PlayerStatus } from "@/lib/types";
+import { Award, Crown } from "lucide-react";
 import { useCallback, useState } from "react";
 
-// const _ = {
+// const temp: Record<number, PlayerStatus> = {
 // 	0: {
 // 		player: {
 // 			id: 0,
@@ -10,6 +11,7 @@ import { useCallback, useState } from "react";
 // 		},
 // 		finished: true,
 // 		casesCompleted: 50,
+// 		timestamp: 10,
 // 	},
 // 	1: {
 // 		player: {
@@ -18,6 +20,7 @@ import { useCallback, useState } from "react";
 // 		},
 // 		finished: false,
 // 		casesCompleted: 10,
+// 		timestamp: 20,
 // 	},
 // 	2: {
 // 		player: {
@@ -26,6 +29,7 @@ import { useCallback, useState } from "react";
 // 		},
 // 		finished: false,
 // 		casesCompleted: 0,
+// 		timestamp: 1,
 // 	},
 // };
 
@@ -44,6 +48,7 @@ function LeaderboardTab() {
 					player: message.player,
 					finished: message.finished,
 					casesCompleted: message.casesCompleted,
+					timestamp: message.timestamp,
 				};
 
 				setPlayers((prev) => ({
@@ -57,19 +62,29 @@ function LeaderboardTab() {
 
 	useWebSocket(onMessage);
 
-	function orderedPlayers(): PlayerStatus[] {
-		return Object.values(
-			Object.fromEntries(
-				Object.entries(players).sort(([, a], [, b]) => {
-					return b.casesCompleted - a.casesCompleted;
-				})
-			)
-		);
+	function orderedPlayers(
+		players: Record<number, PlayerStatus>
+	): PlayerStatus[] {
+		return Object.values(players).sort((a, b) => {
+			if (a.finished && b.finished) {
+				return a.timestamp - b.timestamp;
+			} else if (a.finished) {
+				return -1;
+			} else if (b.finished) {
+				return 1;
+			} else if (b.casesCompleted !== a.casesCompleted) {
+				return b.casesCompleted - a.casesCompleted;
+			} else if (b.timestamp !== a.timestamp) {
+				return a.timestamp - b.timestamp;
+			} else {
+				return a.player.name.localeCompare(b.player.name);
+			}
+		});
 	}
 
 	return Object.keys(players).length > 0 ? (
 		<div className="flex flex-col gap-2">
-			{orderedPlayers().map((value) => (
+			{orderedPlayers(players).map((value, index) => (
 				<div
 					className="border border-white/10 rounded p-2 flex justify-between"
 					style={{
@@ -78,7 +93,15 @@ function LeaderboardTab() {
 							: undefined,
 					}}
 				>
-					<p className="font-bold">{value.player.name}</p>
+					<p className="font-bold flex gap-2">
+						{value.finished &&
+							(index === 0 ? (
+								<Crown />
+							) : index === 1 || index === 2 ? (
+								<Award />
+							) : undefined)}
+						{value.player.name}
+					</p>
 					<p>
 						<span className="font-bold">
 							{value.casesCompleted}

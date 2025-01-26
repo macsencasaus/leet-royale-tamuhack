@@ -37,7 +37,7 @@ function App() {
 					</>
 				)}
 
-				{/* <Lobby /> */}
+				{/* <Lobby force /> */}
 				{/* <Workspace force /> */}
 				{debug && <Logger />}
 			</div>

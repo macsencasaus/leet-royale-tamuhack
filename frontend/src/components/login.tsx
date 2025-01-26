@@ -10,6 +10,7 @@ import { Input } from "./ui/input";
 import useWebSocket from "@/hooks/useWebSocket";
 import { Button } from "./ui/button";
 import { useState } from "react";
+import Rules from "./rules";
 
 function Login() {
 	const { createWebSocket } = useWebSocket();
@@ -23,32 +24,38 @@ function Login() {
 	}
 
 	return (
-		<form className="flex justify-center h-dvh items-center" onSubmit={connect}>
-			<Card className="w-screen max-w-xs">
-				<CardHeader>
-					<CardTitle>LeetGuys</CardTitle>
-					<CardDescription>
-						LeetCode has never been more fun.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<Input
-						placeholder="Display Name"
-						value={name}
-						onChange={(e) => setName(e.target.value)}
-					/>
-				</CardContent>
-				<CardFooter className="flex justify-end">
-					<Button
-						onClick={connect}
-						variant={"outline"}
-                        disabled={name === ""}
-					>
-						Connect
-					</Button>
-				</CardFooter>
-			</Card>
-		</form>
+		<div
+			className="flex justify-center h-dvh items-center gap-2 rounded"
+		>
+			<form onSubmit={connect}>
+				<Card className="w-screen max-w-xs">
+					<CardHeader>
+						<CardTitle>Code Royale</CardTitle>
+						<CardDescription>
+							LeetCode has never been more fun.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Input
+							placeholder="Display Name"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+						/>
+					</CardContent>
+					<CardFooter className="flex justify-end">
+						<Button
+							onClick={connect}
+							variant={"outline"}
+							disabled={name === ""}
+						>
+							Connect
+						</Button>
+					</CardFooter>
+				</Card>
+			</form>
+
+			<Rules />
+		</div>
 	);
 }
 
