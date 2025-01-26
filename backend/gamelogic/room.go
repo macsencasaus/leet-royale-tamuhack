@@ -65,9 +65,9 @@ func newRoom(id int) *room {
 
 	r.waitingForPlayers = waitingForPlayers{r, make(chan struct{})}
 	r.round1Running = round1Running{r, make(chan struct{}), 0, &tr.Questions[0]}
-	r.round2Running = round2Running{r, make(chan struct{}), 1, &tr.Questions[1]}
-	r.round3Running = round3Running{r, make(chan struct{}), 2, &tr.Questions[2], &x}
-	r.round4Running = round4Running{r, make(chan struct{}), 3, &tr.Questions[3]}
+	r.round2Running = round2Running{r, make(chan struct{}), 0, &tr.Questions[0]}
+	r.round3Running = round3Running{r, make(chan struct{}), 0, &tr.Questions[0], &x}
+	r.round4Running = round4Running{r, make(chan struct{}), 0, &tr.Questions[0]}
 	r.gameEnded = gameEnded{r}
 
 	return r
@@ -314,13 +314,13 @@ func (r *room) unregisterClient(clientId clientId) {
     var ok bool
 	{
 		r.clientsMu.Lock()
-		defer r.clientsMu.Unlock()
 		c, ok = r.clients[clientId]
 		if !ok {
 			return
 		}
 		delete(r.clients, clientId)
 		delete(r.clientsDone, clientId)
+		r.clientsMu.Unlock()
 	}
 
 	close(c.roomWrite)
