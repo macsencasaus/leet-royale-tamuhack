@@ -16,8 +16,8 @@ type QuestionData struct {
 	NumCases        int
     VisibleCases    int
 	paramTypes      []string
-	cases           [][][]string //[case][parameter][item] item is just 0 for non lists
-	expectedResults []string     //if return a list, each test case starts with a number saying number of values then is the sequence of values
+	Cases           [][][]string //[case][parameter][item] item is just 0 for non lists
+	ExpectedResults []string     //if return a list, each test case starts with a number saying number of values then is the sequence of values
 	methodName      string
 	returnType      string
 	Prompt          string
@@ -139,15 +139,15 @@ func generatePython(userInput, magicNumber string, r QuestionData) string {
 	//constructs the expected results array
 	if isNotAList(r.returnType) {
 		answer += "\texpected_results = ["
-		for i := 0; i < len(r.expectedResults); i++ {
+		for i := 0; i < len(r.ExpectedResults); i++ {
 			if r.returnType == "string" {
 				answer += "\""
 			}
-			answer += r.expectedResults[i]
+			answer += r.ExpectedResults[i]
 			if r.returnType == "string" {
 				answer += "\""
 			}
-			if i+1 != len(r.expectedResults) {
+			if i+1 != len(r.ExpectedResults) {
 				answer += ","
 			}
 		}
@@ -156,13 +156,13 @@ func generatePython(userInput, magicNumber string, r QuestionData) string {
 		currentIndex := 0
 		for j := 0; j < r.NumCases; j++ { //j=current test case
 			answer += "["
-			lengthOfCurrentTestCase, _ := strconv.Atoi(r.expectedResults[currentIndex]) //get length of [] for the current test case
+			lengthOfCurrentTestCase, _ := strconv.Atoi(r.ExpectedResults[currentIndex]) //get length of [] for the current test case
 			currentIndex++
 			for i := 0; i < lengthOfCurrentTestCase; i++ {
 				if r.returnType == "list string" {
 					answer += "\""
 				}
-				answer += r.expectedResults[currentIndex]
+				answer += r.ExpectedResults[currentIndex]
 				currentIndex++
 				if r.returnType == "list string" {
 					answer += "\""
@@ -185,15 +185,15 @@ func generatePython(userInput, magicNumber string, r QuestionData) string {
 			//Lists have the name: a<testCaseNumber>_<parameterNumber>
 			for j := 0; j < r.NumCases; j++ { //j==current_Case
 				answer += "\ta" + strconv.Itoa(j) + "_" + strconv.Itoa(i) + " = ["
-				for k := 0; k < len(r.cases[j][i]); k++ {
+				for k := 0; k < len(r.Cases[j][i]); k++ {
 					if r.paramTypes[i] == "list string" {
 						answer += "\""
 					}
-					answer += r.cases[j][i][k]
+					answer += r.Cases[j][i][k]
 					if r.paramTypes[i] == "list string" {
 						answer += "\""
 					}
-					if k+1 != len(r.cases[j][i]) {
+					if k+1 != len(r.Cases[j][i]) {
 						answer += ","
 					}
 				}
@@ -203,25 +203,25 @@ func generatePython(userInput, magicNumber string, r QuestionData) string {
 	}
 	//constructs the array holding all of the parameters to be passed into the method
 	answer += "\tcases = [["
-	for i := 0; i < len(r.cases); i++ {
-		for j := 0; j < len(r.cases[i]); j++ {
+	for i := 0; i < len(r.Cases); i++ {
+		for j := 0; j < len(r.Cases[i]); j++ {
 			if isNotAList(r.paramTypes[j]) { //if not a list just add the case data
 				if r.paramTypes[j] == "string" {
 					answer += "\""
 				}
-				answer += r.cases[i][j][0]
+				answer += r.Cases[i][j][0]
 				if r.paramTypes[j] == "string" {
 					answer += "\""
 				}
 			} else {
 				answer += "a" + strconv.Itoa(i) + "_" + strconv.Itoa(j) //if are a list, add the name of the list constructed earlier
 			}
-			if j+1 != len(r.cases[i]) {
+			if j+1 != len(r.Cases[i]) {
 				answer += ","
 			}
 		}
 		answer += "]"
-		if i+1 != len(r.cases) {
+		if i+1 != len(r.Cases) {
 			answer += ",["
 		}
 	}
@@ -275,19 +275,19 @@ func generateC(userInput, magicNumber string, r QuestionData) string {
 	//results array
 	if isNotAList(r.returnType) {
 		answer += "\tvector<" + pythonToC[r.returnType] + "> expected_results = {{"
-		for i := 0; i < len(r.expectedResults); i++ {
+		for i := 0; i < len(r.ExpectedResults); i++ {
 			if r.returnType == "string" {
 				answer += "\""
 			}
 			if r.returnType == "bool" {
-				answer += strings.ToLower(string(r.expectedResults[i]))
+				answer += strings.ToLower(string(r.ExpectedResults[i]))
 			} else {
-				answer += r.expectedResults[i]
+				answer += r.ExpectedResults[i]
 			}
 			if r.returnType == "string" {
 				answer += "\""
 			}
-			if i+1 != len(r.expectedResults) {
+			if i+1 != len(r.ExpectedResults) {
 				answer += "},{"
 			} else {
 				answer += "}"
@@ -298,16 +298,16 @@ func generateC(userInput, magicNumber string, r QuestionData) string {
 		currentIndex := 0
 		for j := 0; j < r.NumCases; j++ {
 			answer += "{"
-			lengthOfCurrentTestCase, _ := strconv.Atoi(r.expectedResults[currentIndex]) //get length of this test cases's array
+			lengthOfCurrentTestCase, _ := strconv.Atoi(r.ExpectedResults[currentIndex]) //get length of this test cases's array
 			currentIndex++
 			for i := 0; i < lengthOfCurrentTestCase; i++ {
 				if r.returnType == "list string" {
 					answer += "\""
 				}
 				if r.returnType == "list bool" {
-					answer += strings.ToLower(string(r.expectedResults[currentIndex]))
+					answer += strings.ToLower(string(r.ExpectedResults[currentIndex]))
 				} else {
-					answer += r.expectedResults[currentIndex]
+					answer += r.ExpectedResults[currentIndex]
 				}
 				if r.returnType == "list string" {
 					answer += "\""
@@ -331,19 +331,19 @@ func generateC(userInput, magicNumber string, r QuestionData) string {
 			//initializes lists and such with name: a<test_case_number>_<parameter_number>
 			for j := 0; j < r.NumCases; j++ { //j==current_case
 				answer += "\t" + pythonToC[r.paramTypes[i]] + " a" + strconv.Itoa(j) + "_" + strconv.Itoa(i) + " = {"
-				for k := 0; k < len(r.cases[j][i]); k++ {
+				for k := 0; k < len(r.Cases[j][i]); k++ {
 					if r.paramTypes[i] == "list string" {
 						answer += "\""
 					}
 					if r.paramTypes[i] == "list bool" {
-						answer += strings.ToLower(string(r.cases[j][i][k]))
+						answer += strings.ToLower(string(r.Cases[j][i][k]))
 					} else {
-						answer += r.cases[j][i][k]
+						answer += r.Cases[j][i][k]
 					}
 					if r.paramTypes[i] == "list string" {
 						answer += "\""
 					}
-					if k+1 != len(r.cases[j][i]) {
+					if k+1 != len(r.Cases[j][i]) {
 						answer += ","
 					}
 				}
@@ -361,16 +361,16 @@ func generateC(userInput, magicNumber string, r QuestionData) string {
 		}
 	}
 	answer += ">> cases = {make_tuple("
-	for i := 0; i < len(r.cases); i++ {
-		for j := 0; j < len(r.cases[i]); j++ {
+	for i := 0; i < len(r.Cases); i++ {
+		for j := 0; j < len(r.Cases[i]); j++ {
 			if isNotAList(r.paramTypes[j]) {
 				if r.paramTypes[j] == "string" {
 					answer += "\""
 				}
 				if r.paramTypes[j] == "bool" {
-					answer += strings.ToLower(string(r.cases[i][j][0]))
+					answer += strings.ToLower(string(r.Cases[i][j][0]))
 				} else {
-					answer += r.cases[i][j][0]
+					answer += r.Cases[i][j][0]
 				}
 				if r.paramTypes[j] == "string" {
 					answer += "\""
@@ -378,12 +378,12 @@ func generateC(userInput, magicNumber string, r QuestionData) string {
 			} else {
 				answer += "a" + strconv.Itoa(i) + "_" + strconv.Itoa(j)
 			}
-			if j+1 != len(r.cases[i]) {
+			if j+1 != len(r.Cases[i]) {
 				answer += ","
 			}
 		}
 		answer += ")"
-		if i+1 != len(r.cases) {
+		if i+1 != len(r.Cases) {
 			answer += ", make_tuple("
 		}
 	}
@@ -430,19 +430,19 @@ func generateJavacript(userInput, magicNumber string, r QuestionData) string {
 	//results array
 	if isNotAList(r.returnType) {
 		answer += "\tlet expected_results = ["
-		for i := 0; i < len(r.expectedResults); i++ {
+		for i := 0; i < len(r.ExpectedResults); i++ {
 			if r.returnType == "string" {
 				answer += "\""
 			}
 			if r.returnType == "bool" {
-				answer += strings.ToLower(string(r.expectedResults[i]))
+				answer += strings.ToLower(string(r.ExpectedResults[i]))
 			} else {
-				answer += r.expectedResults[i]
+				answer += r.ExpectedResults[i]
 			}
 			if r.returnType == "string" {
 				answer += "\""
 			}
-			if i+1 != len(r.expectedResults) {
+			if i+1 != len(r.ExpectedResults) {
 				answer += ","
 			}
 		}
@@ -451,16 +451,16 @@ func generateJavacript(userInput, magicNumber string, r QuestionData) string {
 		currentIndex := 0
 		for j := 0; j < r.NumCases; j++ {
 			answer += "["
-			lengthOfCurrentTestCase, _ := strconv.Atoi(r.expectedResults[currentIndex]) //get length of this test cases's array
+			lengthOfCurrentTestCase, _ := strconv.Atoi(r.ExpectedResults[currentIndex]) //get length of this test cases's array
 			currentIndex++
 			for i := 0; i < lengthOfCurrentTestCase; i++ {
 				if r.returnType == "list string" {
 					answer += "\""
 				}
 				if r.returnType == "list bool" {
-					answer += strings.ToLower(string(r.expectedResults[currentIndex]))
+					answer += strings.ToLower(string(r.ExpectedResults[currentIndex]))
 				} else {
-					answer += r.expectedResults[currentIndex]
+					answer += r.ExpectedResults[currentIndex]
 				}
 				if r.returnType == "list string" {
 					answer += "\""
@@ -484,19 +484,19 @@ func generateJavacript(userInput, magicNumber string, r QuestionData) string {
 			//initializes lists and such with name: a<test_case_number>_<parameter_number>
 			for j := 0; j < r.NumCases; j++ { //j==current_Case
 				answer += "\tlet a" + strconv.Itoa(j) + "_" + strconv.Itoa(i) + " = ["
-				for k := 0; k < len(r.cases[j][i]); k++ {
+				for k := 0; k < len(r.Cases[j][i]); k++ {
 					if r.paramTypes[i] == "list string" {
 						answer += "\""
 					}
 					if r.paramTypes[i] == "list bool" {
-						answer += strings.ToLower(string(r.cases[j][i][k]))
+						answer += strings.ToLower(string(r.Cases[j][i][k]))
 					} else {
-						answer += r.cases[j][i][k]
+						answer += r.Cases[j][i][k]
 					}
 					if r.paramTypes[i] == "list string" {
 						answer += "\""
 					}
-					if k+1 != len(r.cases[j][i]) {
+					if k+1 != len(r.Cases[j][i]) {
 						answer += ","
 					}
 				}
@@ -507,16 +507,16 @@ func generateJavacript(userInput, magicNumber string, r QuestionData) string {
 	}
 
 	answer += "\tlet cases = [["
-	for i := 0; i < len(r.cases); i++ {
-		for j := 0; j < len(r.cases[i]); j++ {
+	for i := 0; i < len(r.Cases); i++ {
+		for j := 0; j < len(r.Cases[i]); j++ {
 			if isNotAList(r.paramTypes[j]) { //if regular
 				if r.paramTypes[j] == "string" {
 					answer += "\""
 				}
 				if r.paramTypes[j] == "bool" {
-					answer += strings.ToLower(string(r.cases[i][j][0]))
+					answer += strings.ToLower(string(r.Cases[i][j][0]))
 				} else {
-					answer += r.cases[i][j][0]
+					answer += r.Cases[i][j][0]
 				}
 				if r.paramTypes[j] == "string" {
 					answer += "\""
@@ -524,12 +524,12 @@ func generateJavacript(userInput, magicNumber string, r QuestionData) string {
 			} else {
 				answer += "a" + strconv.Itoa(i) + "_" + strconv.Itoa(j)
 			}
-			if j+1 != len(r.cases[i]) {
+			if j+1 != len(r.Cases[i]) {
 				answer += ","
 			}
 		}
 		answer += "]"
-		if i+1 != len(r.cases) {
+		if i+1 != len(r.Cases) {
 			answer += ",["
 		}
 	}

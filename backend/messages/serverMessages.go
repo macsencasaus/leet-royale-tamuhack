@@ -1,6 +1,10 @@
 package messages
 
-import tr "leet-guys/testrunner"
+import (
+	"fmt"
+
+	tr "leet-guys/testrunner"
+)
 
 type ServerMessageType string
 
@@ -103,28 +107,21 @@ func NewRoundStartMessage(
 	sec int,
 	rd *tr.QuestionData,
 ) RoundStartMessage {
+	visibleTestCases := make([]TestCase, rd.VisibleCases)
+	for i := range visibleTestCases {
+		visibleTestCases[i] = TestCase{
+			Input:  fmt.Sprintf("%+v", rd.Cases[i]),
+			Output: rd.ExpectedResults[i],
+		}
+	}
 	return RoundStartMessage{
-		Type:         ServerMessageRoundStart,
-		Round:        round,
-		Time:         sec,
-		Prompt:       rd.Prompt,
-		Templates:    rd.Templates,
-		NumTestCases: rd.NumCases,
-		// TODO:
-		VisibleTestCases: []TestCase{
-			{
-				Input:  "1, 2",
-				Output: "3",
-			},
-			{
-				Input:  "-1, 1",
-				Output: "0",
-			},
-			{
-				Input:  "77, 33",
-				Output: "110",
-			},
-		},
+		Type:             ServerMessageRoundStart,
+		Round:            round,
+		Time:             sec,
+		Prompt:           rd.Prompt,
+		Templates:        rd.Templates,
+		NumTestCases:     rd.NumCases,
+		VisibleTestCases: visibleTestCases,
 	}
 }
 func (m RoundStartMessage) serverMessage() {}
@@ -145,10 +142,10 @@ func (m RoundEndMessage) serverMessage() {}
 type TestResultMessage struct {
 	Type  ServerMessageType `json:"type"`
 	TLE   bool              `json:"tle"`
+	Issue string            `json:"issue"`
 	Cases []ResultCase      `json:"cases"`
 }
 
-// TODO:
 func NewTestResultMessage(res *tr.Result) TestResultMessage {
 	var tle bool
 
@@ -166,6 +163,7 @@ func NewTestResultMessage(res *tr.Result) TestResultMessage {
 	return TestResultMessage{
 		Type:  ServerMessageTestResult,
 		TLE:   tle,
+		Issue: string(res.Issue),
 		Cases: resCases,
 	}
 }
@@ -183,14 +181,14 @@ func NewUpdateClientStateMessage(
 	player PlayerInfo,
 	finished bool,
 	casesCompleted int,
-    timestamp int,
+	timestamp int,
 ) UpdateClientStatus {
 	return UpdateClientStatus{
 		Type:           ServerMessageUpdateClientStatus,
 		Player:         player,
 		Finished:       finished,
 		CasesCompleted: casesCompleted,
-        Timestamp: timestamp,
+		Timestamp:      timestamp,
 	}
 }
 func (m UpdateClientStatus) serverMessage() {}
