@@ -216,6 +216,7 @@ func (r *room) runTestRunner(msg m.SubmitMessage, question int) bool {
 	if err != nil {
 		log.Fatal(err)
 	}
+    fmt.Println("test result:", res)
 
 	r.sendMessageTo(msg.PlayerId, m.NewTestResultMessage(&res))
 

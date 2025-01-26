@@ -16,8 +16,8 @@ var Q4 = QuestionData{
 	expectedResults: []string{"12.512345Trueblahblahblah", "12.512345Falseatwatwa", "5-2.5True", "-1400-400.512Falsedwa", "17842142142.1421451Truewiodjahdukjwhyu_W o-)A* 902jbjk mbak \\n"},
 	returnType:      "string",
 	Templates: LanguageFunctionTemplates{
-		Python:     "def multipleParameters(a:int, b:float, ls:list, c:bool, d:str):\n\t\n",
-		Javascript: "func returnList(a, b, ls, c, d) {\n\t\n}",
-		Cpp:        "string returnList(int a, double b, vector<int> ls, bool c, string d) {\n\t\n}",
+		Python:     "def multipleParameters(a:int, b:float, ls:list, c:bool, d:str):\n    \n",
+		Javascript: "function returnList(a, b, ls, c, d) {\n    \n}",
+		Cpp:        "string returnList(int a, double b, vector<int> ls, bool c, string d) {\n    \n}",
 	},
 }

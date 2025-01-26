@@ -16,8 +16,8 @@ var Q2 = QuestionData{
 	expectedResults: []string{"1", "3", "1", "-3", "1", "-1", "1", "0", "1", "4000"},
 	returnType:      "list int",
 	Templates: LanguageFunctionTemplates{
-		Python:     "def addLots(ls:list):\n\t\n",
-		Javascript: "func addLots(ls) {\n\t\n}",
-		Cpp:        "vector<int> addLots(vector<int> list) {\n\t\n}",
+		Python:     "def addLots(ls:list):\n    \n",
+		Javascript: "function addLots(ls) {\n    \n}",
+		Cpp:        "vector<int> addLots(vector<int> list) {\n    \n}",
 	},
 }

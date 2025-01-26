@@ -16,8 +16,8 @@ var Q1 = QuestionData{
 	expectedResults: []string{"3", "-3", "-1", "0", "4000"},
 	returnType:      "int",
 	Templates: LanguageFunctionTemplates{
-		Python:     "def add(a:int, b:int):\n\t\n",
-		Javascript: "function add(a, b) {\n\t\n}",
-		Cpp:        "int add(int a, int b) {\n\t\n}",
+		Python:     "def add(a:int, b:int):\n    \n",
+		Javascript: "function add(a, b) {\n    \n}",
+		Cpp:        "int add(int a, int b) {\n    \n}",
 	},
 }

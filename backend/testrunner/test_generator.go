@@ -425,7 +425,7 @@ func generateJavacript(userInput, magicNumber string, r QuestionData) string {
 	answer += "\n\n"
 	//random number print method Follows:user_output \nmagic_number\n result \nmagic_number\n user_output...
 	answer += "function magic(thingToPrint){\n"
-	answer += "\tconsole.log(\"\\n\"+" + magicNumber + "+\"\\n\"+thingToPrint+\"\\n\"+" + magicNumber + ");}\n\n"
+	answer += "\tconsole.log(\"\\n" + magicNumber + "\\n\"+thingToPrint+\"\\n" + magicNumber + "\");}\n\n"
 	answer += "function main(){\n"
 	//results array
 	if isNotAList(r.returnType) {

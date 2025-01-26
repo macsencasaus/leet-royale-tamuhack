@@ -16,8 +16,8 @@ var Q3 = QuestionData{
 	expectedResults: []string{"2", "1", "2", "1", "-10", "3", "2147483647", "-2147483648", "1515125", "0", "2", "-500", "4500"},
 	returnType:      "list int",
 	Templates: LanguageFunctionTemplates{
-		Python:     "def returnList(ls:list):\n\t\n",
-		Javascript: "func returnList(ls) {\n\t\n}",
-		Cpp:        "vector<int> returnList(vector<int> list) {\n\t\n}",
+		Python:     "def returnList(ls:list):\n    \n",
+		Javascript: "function returnList(ls) {\n    \n}",
+		Cpp:        "vector<int> returnList(vector<int> list) {\n    \n}",
 	},
 }

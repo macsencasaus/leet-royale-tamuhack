@@ -43,13 +43,13 @@ type Result struct {
 }
 
 func (r Result) NCorrect() (int, int) {
-    correct := 0
-    for _, status := range r.PFStatus {
-        if status == AC {
-            correct++
-        }
-    }
-    return correct, len(r.PFStatus)
+	correct := 0
+	for _, status := range r.PFStatus {
+		if status == AC {
+			correct++
+		}
+	}
+	return correct, len(r.PFStatus)
 }
 
 func statusFromCode(letters []byte) TestCaseStatus {
@@ -262,7 +262,7 @@ func RunProblemTest(fileContent []byte, lang Language, magic int64) (Result, err
 	}
 
 	var sections [][]byte = bytes.Split(streamOut, []byte(magicString))
-	for i := 0; i < (len(sections) / 2) * 2; i += 2 {
+	for i := 0; i < (len(sections)/2)*2; i += 2 {
 		testCasesRun++
 		testCaseProgramOut = append(testCaseProgramOut, sections[i])
 		testCaseStatus = append(testCaseStatus, statusFromCode(sections[i+1]))
