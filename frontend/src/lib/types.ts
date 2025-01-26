@@ -48,3 +48,9 @@ export interface Player {
 export interface TestCases {
 	success: boolean;
 }
+
+export interface Templates {
+    python: string;
+    javascript: string;
+    cpp: string;
+}

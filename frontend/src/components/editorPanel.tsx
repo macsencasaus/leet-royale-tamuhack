@@ -1,16 +1,32 @@
-import { Languages } from "@/lib/types";
+import { Languages, Message, Templates } from "@/lib/types";
 import _Editor from "@monaco-editor/react";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send } from "lucide-react";
+import { Send, SkipForward } from "lucide-react";
 import { Button } from "./ui/button";
-
-const solution = `function solution() {
-    // TODO
-}`;
+import useWebSocket from "@/hooks/useWebSocket";
+import { demo } from "@/config";
 
 function EditorPanel() {
+	const { sendMessage } = useWebSocket(onMessage);
+	const [templates, setTemplates] = useState<Templates>({
+		python: "# Python Template",
+		javascript: "// JavaScript Template",
+		cpp: "// C++ Template",
+	});
 	const [language, setLanguage] = useState<Languages>("javascript");
+
+	function onMessage(message: Message) {
+		switch (message.type) {
+			case "ServerMessageRoundStart":
+				setTemplates(message.templates);
+				break;
+		}
+	}
+
+	function skipQuestion() {
+		sendMessage("ClientMessageSkipQuestion");
+	}
 
 	return (
 		<Tabs
@@ -24,12 +40,22 @@ function EditorPanel() {
 					<TabsTrigger value="python">Python</TabsTrigger>
 					<TabsTrigger value="cpp">C++</TabsTrigger>
 				</TabsList>
-				<Button
-					variant={"outline"}
-					style={{ backgroundColor: "rgb(25, 135, 84)" }}
-				>
-					<Send /> Submit
-				</Button>
+				<div className="flex gap-2">
+					{demo && (
+						<Button
+							variant={"outline"}
+							onClick={skipQuestion}
+						>
+							<SkipForward /> Skip
+						</Button>
+					)}
+					<Button
+						variant={"outline"}
+						style={{ backgroundColor: "rgba(25, 135, 84, .5)" }}
+					>
+						<Send /> Submit
+					</Button>
+				</div>
 			</div>
 
 			<div className="py-2 overflow-hidden grow">
@@ -43,7 +69,7 @@ function EditorPanel() {
 							width="100%"
 							defaultLanguage="javascript"
 							theme="vs-dark"
-							defaultValue={solution}
+							defaultValue={templates.javascript}
 							className="rounded"
 						/>
 					</TabsContent>
@@ -56,7 +82,7 @@ function EditorPanel() {
 							width="100%"
 							defaultLanguage="python"
 							theme="vs-dark"
-							defaultValue={solution}
+							defaultValue={templates.python}
 							className="rounded"
 						/>
 					</TabsContent>
@@ -70,7 +96,7 @@ function EditorPanel() {
 							defaultLanguage="c++"
 							language={language}
 							theme="vs-dark"
-							defaultValue={solution}
+							defaultValue={templates.cpp}
 							className="rounded"
 						/>
 					</TabsContent>
