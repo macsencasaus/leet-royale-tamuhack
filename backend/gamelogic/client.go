@@ -57,11 +57,13 @@ func (c *client) readPump() {
 
 		switch w.Type {
 		case m.ClientMessageTypeClientQuit:
-			cm = m.ClientQuitMessage{}
-			err = json.Unmarshal(w.Data, &cm)
+            qm := m.ClientQuitMessage{}
+			err = json.Unmarshal(w.Data, &qm)
+            cm = qm
 		case m.ClientMessageTypeSubmit:
-			cm = m.SubmitMessage{}
-			err = json.Unmarshal(w.Data, &cm)
+            sm := m.SubmitMessage{}
+			err = json.Unmarshal(w.Data, &sm)
+            cm = sm
 		case m.ClientMessageTypeSkipLobby:
 			cm = m.SkipLobbyMessage{}
 		case m.ClientMessageTypeSkipQuestion:
