@@ -15,7 +15,7 @@ var Q3 = reflectionData{
 }
 
 var Q3Template = map[string]string{
-	"python": `def returnList(ls:list):`,
-    "c++": `vector<int> returnList(vector<int> list){`,
-	"javascript":`func returnList(ls){`,
+	"python": `def returnList(ls:list):\n\n\n`,
+    "c++": `vector<int> returnList(vector<int> list){\n\n\n}`,
+	"javascript":`func returnList(ls){\n\n\n}`,
 } 

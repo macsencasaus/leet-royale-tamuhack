@@ -15,7 +15,7 @@ var Q2 = reflectionData{
 }
 
 var Q2Template = map[string]string{
-	"python": `def addLots(ls:list):`,
-    "c++": `vector<int> addLots(vector<int> list){`,
-	"javascript":`func addLots(ls){`,
+	"python": `def addLots(ls:list):\n\n\n`,
+    "c++": `vector<int> addLots(vector<int> list){\n\n\n}`,
+	"javascript":`func addLots(ls){\n\n\n}`,
 } 

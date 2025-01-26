@@ -15,7 +15,7 @@ var Q1 = reflectionData{
 }
 
 var Q1Template = map[string]string{
-	"python": `def add(a:int, b:int):`,
-    "c++": `int add(int a, int b){`,
-	"javascript":`func add(a, b){`,
-} 
+	"python":     `def add(a:int, b:int):\n\n\n`,
+	"c++":        `int add(int a, int b){\n\n\n}`,
+	"javascript": `func add(a, b){\n\n\n}`,
+}
