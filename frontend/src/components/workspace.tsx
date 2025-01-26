@@ -3,27 +3,27 @@ import {
 	ResizablePanel,
 	ResizablePanelGroup,
 } from "@/components/ui/resizeable";
-import Editor from "./editor";
+import EditorPanel from "./editorPanel";
 import InfoPanel from "./infoPanel";
+import HeaderPanel from "./headerPanel";
 
 function Workspace() {
 	return (
-		<ResizablePanelGroup
-			direction="horizontal"
-			className="grow"
-		>
-			<ResizablePanel>
-				<div className="border border-white/10 rounded mr-1 p-2 h-full w-full">
+		<div className="flex flex-col gap-1 h-full">
+			<HeaderPanel />
+			<ResizablePanelGroup
+				direction="horizontal"
+				className="grow"
+			>
+				<ResizablePanel className="border border-white/10 rounded mr-1 p-2 h-full w-full">
 					<InfoPanel />
-				</div>
-			</ResizablePanel>
-			<ResizableHandle className="bg-transparent" />
-			<ResizablePanel>
-				<div className="border border-white/10 rounded ml-1 p-2 h-full">
-					<Editor />
-				</div>
-			</ResizablePanel>
-		</ResizablePanelGroup>
+				</ResizablePanel>
+				<ResizableHandle className="bg-transparent" />
+				<ResizablePanel className="border border-white/10 rounded p-2 h-full">
+					<EditorPanel />
+				</ResizablePanel>
+			</ResizablePanelGroup>
+		</div>
 	);
 }
 
