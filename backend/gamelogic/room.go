@@ -133,9 +133,9 @@ func (s round1Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round2Running struct {
-	r         *room
-	timerDone chan struct{}
-	questionId  int
+	r          *room
+	timerDone  chan struct{}
+	questionId int
 	question   *tr.QuestionData
 }
 
@@ -153,9 +153,9 @@ func (s round2Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round3Running struct {
-	r         *room
-	timerDone chan struct{}
-	questionId  int
+	r          *room
+	timerDone  chan struct{}
+	questionId int
 	question   *tr.QuestionData
 }
 
@@ -174,9 +174,9 @@ func (s round3Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round4Running struct {
-	r         *room
-	timerDone chan struct{}
-	questionId  int
+	r          *room
+	timerDone  chan struct{}
+	questionId int
 	question   *tr.QuestionData
 }
 
@@ -185,8 +185,8 @@ func (s round4Running) handleClientMessage(msg m.ClientMessage) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
 	case m.SubmitMessage:
-		// TODO:
 		if s.r.runTestRunner(msg, s.questionId) {
+            // TODO: declare a winner
 			s.r.setClientDone(msg.PlayerId)
 		}
 	case m.SkipQuestionMessage:
@@ -226,7 +226,7 @@ func (r *room) runTestRunner(msg m.SubmitMessage, question int) bool {
 		c.playerInfo(),
 		correct == total,
 		correct,
-        int(time.Now().Unix()),
+		int(time.Now().Unix()),
 	))
 
 	return correct == total
