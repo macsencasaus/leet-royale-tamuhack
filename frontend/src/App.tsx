@@ -35,7 +35,7 @@ function App() {
 					</>
 				)}
 
-				{/* <Lobby /> */}
+				{/* <Lobby force /> */}
 				{/* <Workspace /> */}
 			</div>
 		</WebSocketContext.Provider>

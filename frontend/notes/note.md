@@ -21,4 +21,6 @@
 - Move to programming
 
 # Fix
-- Start up but make workspace invisible 
+- Kahoot leaderboard
+
+- Skip question
