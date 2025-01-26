@@ -10,6 +10,9 @@ const (
 	ClientMessageTypeReady      = "ClientMessageReady"
 	ClientMessageTypeClientQuit = "ClientMessageClientQuit"
 	ClientMessageTypeSubmit     = "ClientMessageSubmit"
+
+	ClientMessageTypeSkipLobby    = "ClientMessageSkipLobby"
+	ClientMessageTypeSkipQuestion = "ClientSkipQuestion"
 )
 
 type ClientMessage interface {
@@ -40,3 +43,11 @@ type SubmitMessage struct {
 }
 
 func (m SubmitMessage) clientMessage() {}
+
+type SkipLobbyMessage struct{}
+
+func (m SkipLobbyMessage) clientMessage() {}
+
+type SkipQuestionMessage struct{}
+
+func (m SkipQuestionMessage) clientMessage() {}

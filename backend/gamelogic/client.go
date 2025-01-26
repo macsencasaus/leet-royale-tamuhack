@@ -62,6 +62,10 @@ func (c *client) readPump() {
 		case m.ClientMessageTypeSubmit:
 			cm = m.SubmitMessage{}
 			err = json.Unmarshal(w.Data, &cm)
+		case m.ClientMessageTypeSkipLobby:
+			cm = m.SkipLobbyMessage{}
+		case m.ClientMessageTypeSkipQuestion:
+			cm = m.SkipQuestionMessage{}
 		}
 
 		if err != nil {
