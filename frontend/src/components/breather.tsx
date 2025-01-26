@@ -11,10 +11,10 @@ function Breather() {
 			case "ServerMessageRoundEnd":
 				setAll(
 					shuffle(
-						message.currentPlayers.concat(message.eliminatedPlayers)
+                        message.currentPlayers.concat(message.eliminatedPlayers !== null ? message.eliminatedPlayers : [])
 					)
 				);
-				setDead(message.eliminatedPlayers);
+                setDead(message.eliminatedPlayers !== null ? message.eliminatedPlayers : []);
 				break;
 		}
 	}, []);
