@@ -357,8 +357,10 @@ func (r *room) startRoundTimer(
 
 	r.broadcast(endMessage)
 
+	r.handleEliminations()
+
 	r.resetDone()
-	go r.handleEliminations()
+
 	time.Sleep(RoundBetweenTime * time.Second)
 }
 
