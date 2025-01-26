@@ -103,14 +103,14 @@ func collapseMe() {
 	// 	`, "javascript", "747474747", 4))
 }
 
-func generate(userInput string, language string, magicNumber string, questionNumber int) string {
+func generate(userInput string, language Language, magicNumber string, questionNumber int) string {
 
 	r := questionMap[questionNumber]
-	if language == "c++" {
+	if language == CPP {
 		return generateC(userInput, magicNumber, r)
-	} else if language == "python" {
+	} else if language == Python {
 		return generatePython(userInput, magicNumber, r)
-	} else if language == "javascript" {
+	} else if language == Javascript {
 		return generateJavacript(userInput, magicNumber, r)
 	}
 	return "set language to either 'c++', 'python', or 'javascript'"

@@ -220,8 +220,7 @@ func runJavascript(fileContent []byte, magic int64) ([]byte, ErrorStage, error) 
 }
 
 // Expects in the format `STDOUT` "\n" `MAGIC` "\n" `INFO` "\n" `MAGIC` "\n" ...
-func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
-	magic := generateMagic()
+func RunProblemTest(fileContent []byte, lang Language, magic int64) (Result, error) {
 	magicString := fmt.Sprintf("\n%d\n", magic)
 
 	var streamOut []byte
@@ -263,4 +262,12 @@ func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
 	}
 
 	return Result{stage, testCasesRun, testCaseProgramOut, testCaseStatus}, nil
+}
+
+func RunTest(infile []byte, lang Language, question int) (Result, error) {
+	magic := generateMagic()
+	magicString := fmt.Sprintf("%d", magic)
+
+	file := []byte(generate(string(infile), lang, magicString, question))
+	return RunProblemTest(file, lang, magic)
 }

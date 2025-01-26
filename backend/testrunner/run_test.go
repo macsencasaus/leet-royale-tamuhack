@@ -168,7 +168,8 @@ func TestRunProblemTest_happy(t *testing.T) {
         ;
     }
     `
-	res, err := RunProblemTest([]byte(file), CPP)
+	magic := generateMagic()
+	res, err := RunProblemTest([]byte(file), CPP, magic)
 	if err != nil {
 		t.Errorf("Err was non-nil: %v\n", err)
 	}
