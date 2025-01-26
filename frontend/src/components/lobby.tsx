@@ -8,13 +8,12 @@ import {
 } from "@/components/ui/card";
 import useWebSocket from "@/hooks/useWebSocket";
 import { Message, Player } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { SkipForward } from "lucide-react";
 
 function Lobby({ force }: { force?: boolean }) {
-	const { gameState, player, sendMessage } = useWebSocket(onMessage);
 	const [lobbyId, setLobbyId] = useState(-1);
 	const [waitTime, setWaitTime] = useState<number | undefined>(undefined);
 	const [others, setOthers] = useState<Player[]>([]);
@@ -23,7 +22,7 @@ function Lobby({ force }: { force?: boolean }) {
 		sendMessage("ClientMessageReady");
 	}, []);
 
-	function onMessage(message: Message) {
+	const onMessage = useCallback((message: Message) => {
 		switch (message.type) {
 			case "ServerMessageRoomGreeting":
 				setLobbyId(message.lobbyId);
@@ -41,7 +40,9 @@ function Lobby({ force }: { force?: boolean }) {
 				setWaitTime(message.count);
 				break;
 		}
-	}
+	}, []);
+
+	const { gameState, player, sendMessage } = useWebSocket(onMessage);
 
 	function skipLobby() {
 		sendMessage("ClientMessageSkipLobby");

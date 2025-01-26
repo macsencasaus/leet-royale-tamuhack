@@ -1,14 +1,12 @@
 import useWebSocket from "@/hooks/useWebSocket";
 import { Message } from "@/lib/types";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 function HeaderPanel() {
-	useWebSocket(onMessage);
-
 	const [round, setRound] = useState(0);
 	const [timeLeft, setTimeLeft] = useState<number | undefined>(100);
 
-	function onMessage(message: Message) {
+	const onMessage = useCallback((message: Message) => {
 		switch (message.type) {
 			case "ServerMessageRoundStart":
 				setRound(message.round);
@@ -18,7 +16,9 @@ function HeaderPanel() {
 				setTimeLeft(undefined);
 				break;
 		}
-	}
+	}, []);
+
+	useWebSocket(onMessage);
 
 	function formatTime(seconds: number | undefined) {
 		if (seconds === undefined) {

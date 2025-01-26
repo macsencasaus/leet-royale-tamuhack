@@ -4,6 +4,7 @@ import { WebSocketContext } from "./hooks/context";
 import Login from "./components/login";
 import Lobby from "./components/lobby";
 import { GameState, Player } from "./lib/types";
+import Logger from "./components/logger";
 
 function App() {
 	const [gameState, setGameState] = useState<GameState>("login");
@@ -37,6 +38,7 @@ function App() {
 
 				{/* <Lobby /> */}
 				{/* <Workspace force /> */}
+				<Logger />
 			</div>
 		</WebSocketContext.Provider>
 	);

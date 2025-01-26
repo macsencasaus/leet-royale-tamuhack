@@ -8,18 +8,19 @@ import useWebSocket from "@/hooks/useWebSocket";
 import { demo } from "@/config";
 
 function EditorPanel() {
-	const { sendMessage } = useWebSocket(onMessage);
-	const [templates, setTemplates] = useState<Templates>({
-		python: "# Python Template",
-		javascript: "// JavaScript Template",
-		cpp: "// C++ Template",
-	});
+	const { player, sendMessage } = useWebSocket(onMessage);
+	const [templates, setTemplates] = useState<Templates | undefined>(
+		undefined
+	);
 	const [language, setLanguage] = useState<Languages>("javascript");
 
 	function onMessage(message: Message) {
 		switch (message.type) {
 			case "ServerMessageRoundStart":
 				setTemplates(message.templates);
+				break;
+			case "ServerMessageRoundEnd":
+				setTemplates(undefined);
 				break;
 		}
 	}
@@ -59,48 +60,73 @@ function EditorPanel() {
 			</div>
 
 			<div className="py-2 overflow-hidden grow">
-				<div className="-ml-8 h-full">
-					<TabsContent
-						value="javascript"
-						className="h-full"
-					>
-						<_Editor
-							height="100%"
-							width="100%"
-							defaultLanguage="javascript"
-							theme="vs-dark"
-							defaultValue={templates.javascript}
-							className="rounded"
-						/>
-					</TabsContent>
-					<TabsContent
-						value="python"
-						className="h-full"
-					>
-						<_Editor
-							height="100%"
-							width="100%"
-							defaultLanguage="python"
-							theme="vs-dark"
-							defaultValue={templates.python}
-							className="rounded"
-						/>
-					</TabsContent>
-					<TabsContent
-						value="cpp"
-						className="h-full"
-					>
-						<_Editor
-							height="100%"
-							width="100%"
-							defaultLanguage="c++"
-							language={language}
-							theme="vs-dark"
-							defaultValue={templates.cpp}
-							className="rounded"
-						/>
-					</TabsContent>
-				</div>
+				{templates ? (
+					<div className="-ml-8 h-full">
+						<TabsContent
+							value="javascript"
+							className="h-full"
+							forceMount
+							style={{
+								display:
+									language !== "javascript"
+										? "none"
+										: undefined,
+							}}
+						>
+							<_Editor
+								height="100%"
+								width="100%"
+								defaultLanguage="javascript"
+								theme="vs-dark"
+								defaultValue={templates.javascript}
+								className="rounded"
+							/>
+						</TabsContent>
+						<TabsContent
+							value="python"
+							className="h-full"
+							forceMount
+							style={{
+								display:
+									language !== "python" ? "none" : undefined,
+							}}
+						>
+							<_Editor
+								height="100%"
+								width="100%"
+								defaultLanguage="python"
+								theme="vs-dark"
+								defaultValue={templates.python}
+								className="rounded"
+							/>
+						</TabsContent>
+						<TabsContent
+							value="cpp"
+							className="h-full"
+							forceMount
+							style={{
+								display:
+									language !== "cpp" ? "none" : undefined,
+							}}
+						>
+							<_Editor
+								height="100%"
+								width="100%"
+								defaultLanguage="c++"
+								language={language}
+								theme="vs-dark"
+								defaultValue={templates.cpp}
+								className="rounded"
+							/>
+						</TabsContent>
+					</div>
+				) : (
+					<p>
+						Hold your horses,{" "}
+						<span className="font-bold">{player?.name}</span>. The
+						round hasn't started yet.
+					</p>
+				)}
 			</div>
 		</Tabs>
 	);
