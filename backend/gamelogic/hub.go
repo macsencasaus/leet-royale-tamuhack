@@ -5,9 +5,14 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+    m "leet-guys/messages"
 )
 
+var cId int = 0
+
 type Hub struct {
+	register   chan *client
+	unregister chan *client
 }
 
 func NewHub() *Hub {
@@ -26,5 +31,17 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn.WriteMessage(websocket.TextMessage, []byte("Poop fart"))
+    queryParams := r.URL.Query()
+
+    name := queryParams.Get("name")
+
+    c := &client{
+        id: cId,
+        name: name,
+        conn: conn,
+    }
+
+	conn.WriteJSON(m.NewHubGreetingMessage(c.playerInfo()))
+
+    cId++
 }
