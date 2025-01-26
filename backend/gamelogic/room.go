@@ -67,9 +67,9 @@ func newRoom(id int) *room {
 	var x atomic.Int32
 
 	r.waitingForPlayers = waitingForPlayers{r, make(chan struct{})}
-	r.round1Running = round1Running{r, make(chan struct{}), 0, &tr.Questions[5]}
+	r.round1Running = round1Running{r, make(chan struct{}), 0, &tr.Questions[0]}
 	r.round2Running = round2Running{r, make(chan struct{}), 4, &tr.Questions[4]}
-	r.round3Running = round3Running{r, make(chan struct{}), 5, &tr.Questions[0], &x}
+	r.round3Running = round3Running{r, make(chan struct{}), 5, &tr.Questions[5], &x}
 	r.round4Running = round4Running{r, make(chan struct{}), 7, &tr.Questions[7]}
 	r.gameEnded = gameEnded{r}
 
