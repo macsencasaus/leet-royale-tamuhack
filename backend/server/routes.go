@@ -16,10 +16,12 @@ func Serve() {
 func routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-    fileServer := http.FileServer(http.Dir("../frontend/dist/"))
+	fileServer := http.FileServer(http.Dir("../frontend/dist/"))
 	mux.Handle("/", fileServer)
 
 	hub := gamelogic.NewHub()
+	go hub.Run()
+
 	mux.HandleFunc("/ws", hub.ServeWs)
 
 	return mux

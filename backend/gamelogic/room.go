@@ -1,6 +1,7 @@
 package gamelogic
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -10,8 +11,9 @@ import (
 
 type clientId = int
 
-const ClientsPerLobby = 40
+const ClientsPerRoom = 40
 
+const RoomWait = 60    // 1 minutes
 const Round1Time = 300 // 5 minutes
 const Round2Time = 300 // 5 minutes
 const Round3Time = 300 // 5 minutes
@@ -23,9 +25,9 @@ type room struct {
 
 	roomRead chan m.ClientMessage
 
-	clientsMu sync.RWMutex
-	clients   map[clientId]*client
-	clientsDone   map[clientId]bool
+	clientsMu   sync.RWMutex
+	clients     map[clientId]*client
+	clientsDone map[clientId]bool
 
 	stateMu sync.Mutex
 	state   roomState
@@ -37,6 +39,8 @@ type room struct {
 	round3Running
 	round4Running
 	gameEnded
+
+	hub *Hub
 }
 
 func newRoom(id int) *room {
@@ -44,7 +48,10 @@ func newRoom(id int) *room {
 		id:       id,
 		register: make(chan *client),
 
-		clients: make(map[clientId]*client),
+		roomRead: make(chan m.ClientMessage),
+
+		clients:     make(map[clientId]*client),
+		clientsDone: make(map[clientId]bool),
 	}
 
 	r.waitingForPlayers = waitingForPlayers{r, make(chan bool)}
@@ -63,19 +70,24 @@ func (r *room) run() {
 		close(r.roomRead)
 	}()
 
-	r.state = r.waitingForPlayers
+	r.setState(r.waitingForPlayers)
+
+	go r.startCountDown(
+		RoomWait,
+		r.round1Running,
+		m.NewRoundStartMessage(1, Round1Time),
+		r.waitingForPlayers.countdownStop,
+	)
 
 	for {
 		select {
 		case client := <-r.register:
-			_, ok := r.state.(waitingForPlayers)
-			if !ok {
+			if !r.isOpen() {
 				log.Fatalf("unable to register with state %T", r.state)
 			}
 			if r.registerClient(client) {
-				r.broadcast(m.NewRoundStartMessage(1, Round1Time))
-				r.setState(r.round1Running)
-				go r.startTimer(Round1Time, r.round2Running, r.round1Running.timerStop)
+				r.countdownStop <- true
+				// go r.startTimer(Round1Time, r.round2Running, r.round1Running.timerStop)
 			}
 		case msg := <-r.roomRead:
 			r.state.handleClientMessage(msg)
@@ -89,7 +101,7 @@ type roomState interface {
 
 type waitingForPlayers struct {
 	r             *room
-	countDownStop chan bool
+	countdownStop chan bool
 }
 
 func (s waitingForPlayers) handleClientMessage(msg m.ClientMessage) {
@@ -105,7 +117,7 @@ type round1Running struct {
 }
 
 func (s round1Running) handleClientMessage(msg m.ClientMessage) {
-    // TODO:
+	// TODO:
 }
 
 type round2Running struct {
@@ -139,12 +151,18 @@ func (r *room) setState(s roomState) {
 
 func (r *room) registerClient(c *client) bool {
 	r.broadcast(m.NewClientJoinedMessage(c.playerInfo()))
-	roomWrite := make(chan m.ServerMessage)
-	c.roomWrite = roomWrite
+
+	c.roomRead = r.roomRead
+	go c.readPump()
+
+	c.roomWrite <- m.NewRoomGreetingMessage(r.id, r.playersInfo())
+	log.Println("Greeting Message Written")
+
 	r.clientsMu.Lock()
 	r.clients[c.id] = c
-	full := len(r.clients) == ClientsPerLobby
+	full := len(r.clients) == ClientsPerRoom
 	r.clientsMu.Unlock()
+
 	return full
 }
 
@@ -152,8 +170,10 @@ func (r *room) unregisterClient(clientId clientId) {
 	r.clientsMu.Lock()
 	c := r.clients[clientId]
 	delete(r.clients, clientId)
+	delete(r.clientsDone, clientId)
 	r.clientsMu.Unlock()
 	close(c.roomWrite)
+	c.log("unregistered")
 	r.broadcast(m.NewClientLeftMessage(c.playerInfo()))
 }
 
@@ -192,23 +212,58 @@ func (r *room) startTimer(sec int, successState roomState, stop chan bool) {
 	}
 }
 
-func (r *room) startCountDown(sec int, successState roomState, stop chan bool) {
+func (r *room) startCountDown(sec int, successState roomState, successMessage m.ServerMessage, stop chan bool) {
 	defer func() {
 		close(stop)
 	}()
 
 	ticker := time.NewTicker(time.Second)
 
-	for i := sec; i >= 1; i++ {
+	for i := sec; i >= 1; i-- {
 		select {
 		case success := <-stop:
 			if success {
 				r.setState(successState)
+				r.broadcast(successMessage)
 			}
 			return
 		case <-ticker.C:
 			r.broadcast(m.NewCountdownMessage(i))
-			return
 		}
 	}
+	r.setState(successState)
+	r.broadcast(successMessage)
+}
+
+func (r *room) playersInfo() []m.PlayerInfo {
+	r.clientsMu.RLock()
+	playersInfo := make([]m.PlayerInfo, 0, len(r.clients))
+	for _, client := range r.clients {
+		playersInfo = append(playersInfo, client.playerInfo())
+	}
+	r.clientsMu.RUnlock()
+	return playersInfo
+}
+
+func (r *room) isOpen() bool {
+	r.clientsMu.RLock()
+	if len(r.clients) == ClientsPerRoom {
+		return false
+	}
+	r.clientsMu.RUnlock()
+	r.stateMu.Lock()
+	_, ok := r.state.(waitingForPlayers)
+	r.stateMu.Unlock()
+	return ok
+}
+
+func (r *room) isRunning() bool {
+	r.stateMu.Lock()
+	running := r.state != nil
+	r.stateMu.Unlock()
+	return running
+}
+
+func (r *room) log(format string, v ...any) {
+	log.Printf("room %d: %s", r.id, fmt.Sprintf(format, v...))
 }

@@ -1,9 +1,9 @@
 package main
 
 import (
-    "leet-guys/server"
+	"leet-guys/server"
 )
 
 func main() {
-    server.Serve() 
+	server.Serve()
 }

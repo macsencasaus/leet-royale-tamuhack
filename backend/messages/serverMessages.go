@@ -3,15 +3,15 @@ package messages
 type ServerMessageType string
 
 const (
-	ServerMessageTypeHubGreeting   = "ServerMessageHubGreeting"
-	ServerMessageTypeLobbyGreeting = "ServerMessageLobbyGreeting"
-	ServerMessageCountdown         = "ServerMessageCountdown"
-	ServerMessageClientJoined      = "ServerMessageClientJoined"
-	ServerMessageClientLeft        = "ServerMessageClientLeft"
-	ServerMessageRoundStart        = "ServerMessageRoundStart"
-	ServerMessageRoundEnd          = "ServerMessageRoundEnd"
-	ServerMessageTestPassed        = "ServerMessageTestPassed"
-	ServerMessageTestFailed        = "ServerMessageTestFailed"
+	ServerMessageTypeHubGreeting  = "ServerMessageHubGreeting"
+	ServerMessageTypeRoomGreeting = "ServerMessageRoomGreeting"
+	ServerMessageCountdown        = "ServerMessageCountdown"
+	ServerMessageClientJoined     = "ServerMessageClientJoined"
+	ServerMessageClientLeft       = "ServerMessageClientLeft"
+	ServerMessageRoundStart       = "ServerMessageRoundStart"
+	ServerMessageRoundEnd         = "ServerMessageRoundEnd"
+	ServerMessageTestPassed       = "ServerMessageTestPassed"
+	ServerMessageTestFailed       = "ServerMessageTestFailed"
 )
 
 type ServerMessage interface {
@@ -31,20 +31,20 @@ func NewHubGreetingMessage(p PlayerInfo) HubGreetingMessage {
 }
 func (m HubGreetingMessage) serverMessage() {}
 
-type LobbyGreetingMessage struct {
+type RoomGreetingMessage struct {
 	Type         ServerMessageType `json:"type"`
 	LobbyId      int               `json:"lobbyId"`
 	OtherPlayers []PlayerInfo      `json:"otherPlayers"`
 }
 
-func NewLobbyGreetingMessage(lobbyId int, otherPlayers []PlayerInfo) LobbyGreetingMessage {
-	return LobbyGreetingMessage{
-		Type:         ServerMessageTypeLobbyGreeting,
+func NewRoomGreetingMessage(lobbyId int, otherPlayers []PlayerInfo) RoomGreetingMessage {
+	return RoomGreetingMessage{
+		Type:         ServerMessageTypeRoomGreeting,
 		LobbyId:      lobbyId,
 		OtherPlayers: otherPlayers,
 	}
 }
-func (m LobbyGreetingMessage) serverMessage() {}
+func (m RoomGreetingMessage) serverMessage() {}
 
 type CountdownMessage struct {
 	Type  ServerMessageType `json:"type"`

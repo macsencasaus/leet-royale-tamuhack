@@ -23,11 +23,11 @@ type client struct {
 
 func (c *client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
 		if c.roomRead != nil {
-			c.roomRead <- m.ClientQuitMessage{}
+			c.roomRead <- m.ClientQuitMessage{PlayerId: c.id}
 		}
 		c.conn.Close()
+		c.log("readPump closed")
 	}()
 
 	for {
@@ -35,11 +35,15 @@ func (c *client) readPump() {
 
 		err := c.conn.ReadJSON(&v)
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				c.log("error: %v", err)
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				c.log("Tried to read, websocket closed")
+				break
 			}
+			c.log("error reading connection json: %v", err)
 			break
 		}
+
+		c.log("message received: %s", v)
 
 		var w m.ClientMessageWrapper
 
@@ -70,7 +74,10 @@ func (c *client) readPump() {
 }
 
 func (c *client) writePump() {
-	defer c.conn.Close()
+	defer func() {
+		c.conn.Close()
+		c.log("writePump closed")
+	}()
 
 	for {
 		msg, ok := <-c.roomWrite
@@ -80,7 +87,11 @@ func (c *client) writePump() {
 		}
 		err := c.conn.WriteJSON(msg)
 		if err != nil {
-			c.log("error writing server messaeg to json")
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				c.log("Tried to write, websocket closed")
+				break
+			}
+			c.log("error writing server message to json")
 			return
 		}
 	}
