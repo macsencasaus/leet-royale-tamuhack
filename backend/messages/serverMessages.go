@@ -3,15 +3,17 @@ package messages
 type ServerMessageType string
 
 const (
-	ServerMessageTypeHubGreeting  = "ServerMessageHubGreeting"
-	ServerMessageTypeRoomGreeting = "ServerMessageRoomGreeting"
-	ServerMessageCountdown        = "ServerMessageCountdown"
-	ServerMessageClientJoined     = "ServerMessageClientJoined"
-	ServerMessageClientLeft       = "ServerMessageClientLeft"
-	ServerMessageRoundStart       = "ServerMessageRoundStart"
-	ServerMessageRoundEnd         = "ServerMessageRoundEnd"
-	ServerMessageTestPassed       = "ServerMessageTestPassed"
-	ServerMessageTestFailed       = "ServerMessageTestFailed"
+	ServerMessageTypeHubGreeting    = "ServerMessageHubGreeting"
+	ServerMessageTypeRoomGreeting   = "ServerMessageRoomGreeting"
+	ServerMessageCountdown          = "ServerMessageCountdown"
+	ServerMessageClientJoined       = "ServerMessageClientJoined"
+	ServerMessageClientLeft         = "ServerMessageClientLeft"
+	ServerMessageRoundStart         = "ServerMessageRoundStart"
+	ServerMessageRoundEnd           = "ServerMessageRoundEnd"
+	ServerMessageTestPassed         = "ServerMessageTestPassed"
+	ServerMessageTestFailed         = "ServerMessageTestFailed"
+	ServerMessageUpdateClientStatus = "ServerMessageUpdateClientStatus"
+	ServerMessageClientEliminated   = "ServerMessageClientEliminated"
 )
 
 type ServerMessage interface {
@@ -97,30 +99,30 @@ type RoundStartMessage struct {
 
 func NewRoundStartMessage(round int, sec int) RoundStartMessage {
 	return RoundStartMessage{
-		Type:  ServerMessageRoundStart,
-		Round: round,
-		Time:  sec,
-        Prompt: "<p>Add two numbers.<p>",
-        Templates: languageFunctionTemplate{
-            Python: "def add(a, b):",
-            Javascript: "function add(a, b){\n\n}",
-            Cpp: "int add(int a, int b){\n\n}",
-        },
-        NumTestCases: 20,
-        VisibleTestCases: []testCase{
-            {
-                Input: "1, 2",
-                Output: "3",
-            },
-            {
-                Input: "-1, 1",
-                Output: "0",
-            },
-            {
-                Input: "77, 33",
-                Output: "110",
-            },
-        },
+		Type:   ServerMessageRoundStart,
+		Round:  round,
+		Time:   sec,
+		Prompt: "<p>Add two numbers.<p>",
+		Templates: languageFunctionTemplate{
+			Python:     "def add(a, b):\n\t",
+			Javascript: "function add(a, b){\n\t\n}",
+			Cpp:        "int add(int a, int b){\n\t\n}",
+		},
+		NumTestCases: 20,
+		VisibleTestCases: []testCase{
+			{
+				Input:  "1, 2",
+				Output: "3",
+			},
+			{
+				Input:  "-1, 1",
+				Output: "0",
+			},
+			{
+				Input:  "77, 33",
+				Output: "110",
+			},
+		},
 	}
 }
 func (m RoundStartMessage) serverMessage() {}
@@ -164,6 +166,47 @@ func NewTestFailedMessage(question string) TestFailedMessage {
 	}
 }
 func (m TestFailedMessage) servermessage() {}
+
+type UpdateClientStatus struct {
+	Type               ServerMessageType `json:"type"`
+	Player             PlayerInfo        `json:"player"`
+	Finished           bool              `json:"finished"`
+	QuestionsCompleted int               `json:"questionsCompleted"`
+}
+
+func NewUpdateClientStateMessage(
+	player PlayerInfo,
+	finished bool,
+	questionsCompleted int,
+) UpdateClientStatus {
+	return UpdateClientStatus{
+		Player:             player,
+		Finished:           finished,
+		QuestionsCompleted: questionsCompleted,
+	}
+}
+func (m UpdateClientStatus) serverMessage() {}
+
+type ClientEliminatedMessage struct {
+	Type         ServerMessageType `json:"type"`
+	Player       PlayerInfo        `json:"player"`
+	Place        int               `json:"place"`
+	TotalPlayers int               `json:"totalPlayers"`
+}
+
+func NewClientEliminatedMessage(
+	player PlayerInfo,
+	place int,
+	totalPlayers int,
+) ClientEliminatedMessage {
+	return ClientEliminatedMessage{
+		Player:       player,
+		Place:        place,
+		TotalPlayers: totalPlayers,
+	}
+}
+
+func (m ClientEliminatedMessage) serverMessage() {}
 
 type PlayerInfo struct {
 	Id   int    `json:"id"`

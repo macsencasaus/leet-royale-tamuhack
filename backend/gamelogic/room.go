@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	m "leet-guys/messages"
@@ -33,6 +34,9 @@ type room struct {
 
 	stateMu sync.Mutex
 	state   roomState
+
+	totalPlayers atomic.Int32
+	place        atomic.Int32
 
 	// states
 	waitingForPlayers
@@ -113,7 +117,12 @@ type round1Running struct {
 }
 
 func (s round1Running) handleClientMessage(msg m.ClientMessage) {
-	// TODO:
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type round2Running struct {
@@ -122,7 +131,12 @@ type round2Running struct {
 }
 
 func (s round2Running) handleClientMessage(msg m.ClientMessage) {
-
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type round3Running struct {
@@ -131,7 +145,12 @@ type round3Running struct {
 }
 
 func (s round3Running) handleClientMessage(msg m.ClientMessage) {
-
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type round4Running struct {
@@ -140,7 +159,12 @@ type round4Running struct {
 }
 
 func (s round4Running) handleClientMessage(msg m.ClientMessage) {
-
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type gameEnded struct {
@@ -161,7 +185,7 @@ func (r *room) setState(s roomState) {
 			r.waitingForPlayers.countdownDone,
 		)
 	case round1Running:
-		go r.startTimer(
+		go r.startRoundTimer(
 			Round1Time,
 			r.round2Running,
 			m.NewRoundEndMessage(1),
@@ -169,7 +193,7 @@ func (r *room) setState(s roomState) {
 			r.round1Running.timerDone,
 		)
 	case round2Running:
-		go r.startTimer(
+		go r.startRoundTimer(
 			Round2Time,
 			r.round3Running,
 			m.NewRoundEndMessage(2),
@@ -177,7 +201,7 @@ func (r *room) setState(s roomState) {
 			r.round2Running.timerDone,
 		)
 	case round3Running:
-		go r.startTimer(
+		go r.startRoundTimer(
 			Round3Time,
 			r.round4Running,
 			m.NewRoundEndMessage(3),
@@ -185,7 +209,7 @@ func (r *room) setState(s roomState) {
 			r.round3Running.timerDone,
 		)
 	case round4Running:
-		go r.startTimer(
+		go r.startRoundTimer(
 			Round4Time,
 			r.gameEnded,
 			m.NewRoundEndMessage(4),
@@ -212,6 +236,9 @@ func (r *room) registerClient(c *client) bool {
 	full := len(r.clients) == ClientsPerRoom
 	r.clientsMu.Unlock()
 
+	r.totalPlayers.Add(1)
+	r.place.Add(1)
+
 	return full
 }
 
@@ -221,8 +248,13 @@ func (r *room) unregisterClient(clientId clientId) {
 	delete(r.clients, clientId)
 	delete(r.clientsDone, clientId)
 	r.clientsMu.Unlock()
+
 	close(c.roomWrite)
+
+	r.place.Add(-1)
+
 	c.log("unregistered")
+
 	r.broadcast(m.NewClientLeftMessage(c.playerInfo()))
 }
 
@@ -240,7 +272,7 @@ func (r *room) sentMessageTo(clientId clientId, msg m.ServerMessage) {
 	r.clientsMu.RUnlock()
 }
 
-func (r *room) startTimer(
+func (r *room) startRoundTimer(
 	sec int,
 	nextState roomState,
 	endMessage m.ServerMessage,
@@ -267,6 +299,7 @@ func (r *room) startTimer(
 
 	r.broadcast(endMessage)
 
+	go r.handleEliminations()
 	time.Sleep(RoundBetweenTime * time.Second)
 }
 
@@ -288,6 +321,42 @@ func (r *room) startCountdown(sec int, nextState roomState, broadcastMessage m.S
 			r.broadcast(m.NewCountdownMessage(i))
 		}
 	}
+}
+
+func (r *room) handleEliminations() {
+	r.clientsMu.Lock()
+	for cId, finished := range r.clientsDone {
+		if !finished {
+			c := r.clients[cId]
+			r.clients[cId].roomWrite <- m.NewClientEliminatedMessage(
+				c.playerInfo(),
+				int(r.place.Load()),
+				int(r.totalPlayers.Load()),
+			)
+
+			delete(r.clients, cId)
+			delete(r.clientsDone, cId)
+			close(c.roomWrite)
+			r.place.Add(-1)
+			c.log("eliminated")
+			r.broadcast(m.NewClientLeftMessage(c.playerInfo()))
+		}
+	}
+	r.clientsMu.Unlock()
+}
+
+func (r *room) setClientDone(clientId int) {
+	r.clientsMu.Lock()
+	r.clientsDone[clientId] = true
+	r.clientsMu.Unlock()
+}
+
+func (r *room) resetDone() {
+	r.clientsMu.Lock()
+	for clientsId := range r.clientsDone {
+		r.clientsDone[clientsId] = false
+	}
+	r.clientsMu.Unlock()
 }
 
 func (r *room) playersInfo() []m.PlayerInfo {
