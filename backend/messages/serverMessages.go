@@ -86,9 +86,13 @@ func NewClientLeftMessage(player PlayerInfo) ClientLeftMessage {
 func (m ClientLeftMessage) serverMessage() {}
 
 type RoundStartMessage struct {
-	Type  ServerMessageType `json:"type"`
-	Round int               `json:"round"`
-	Time  int               `json:"time"`
+	Type             ServerMessageType        `json:"type"`
+	Round            int                      `json:"round"`
+	Time             int                      `json:"time"`
+	Prompt           string                   `json:"prompt"`
+	Templates        languageFunctionTemplate `json:"templates"`
+	NumTestCases     int                      `json:"numTestCases"`
+	VisibleTestCases []testCase               `json:"visibleTestCases"`
 }
 
 func NewRoundStartMessage(round int, sec int) RoundStartMessage {
@@ -96,6 +100,27 @@ func NewRoundStartMessage(round int, sec int) RoundStartMessage {
 		Type:  ServerMessageRoundStart,
 		Round: round,
 		Time:  sec,
+        Prompt: "<p>Add two numbers.<p>",
+        Templates: languageFunctionTemplate{
+            Python: "def add(a, b):",
+            Javascript: "function add(a, b){\n\n}",
+            Cpp: "int add(int a, int b){\n\n}",
+        },
+        NumTestCases: 20,
+        VisibleTestCases: []testCase{
+            {
+                Input: "1, 2",
+                Output: "3",
+            },
+            {
+                Input: "-1, 1",
+                Output: "0",
+            },
+            {
+                Input: "77, 33",
+                Output: "110",
+            },
+        },
 	}
 }
 func (m RoundStartMessage) serverMessage() {}
@@ -143,4 +168,15 @@ func (m TestFailedMessage) servermessage() {}
 type PlayerInfo struct {
 	Id   int    `json:"id"`
 	Name string `json:"name"`
+}
+
+type languageFunctionTemplate struct {
+	Python     string `json:"python"`
+	Javascript string `json:"javascript"`
+	Cpp        string `json:"cpp"`
+}
+
+type testCase struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
 }
