@@ -311,19 +311,16 @@ func (r *room) registerClient(c *client) bool {
 }
 
 func (r *room) unregisterClient(clientId clientId) {
-    var c *client
-    var ok bool
-	{
-		r.clientsMu.Lock()
-		c, ok = r.clients[clientId]
-		if !ok {
-			return
-		}
-        r.clientsLeft = append(r.clientsLeft, c.playerInfo())
-		delete(r.clients, clientId)
-		delete(r.clientsDone, clientId)
-		r.clientsMu.Unlock()
-	}
+    r.clientsMu.Lock()
+    c, ok := r.clients[clientId]
+    if !ok {
+        r.clientsMu.Unlock()
+        return
+    }
+    r.clientsLeft = append(r.clientsLeft, c.playerInfo())
+    delete(r.clients, clientId)
+    delete(r.clientsDone, clientId)
+    r.clientsMu.Unlock()
 
 	close(c.roomWrite)
 
