@@ -9,7 +9,7 @@ import StoreTab from "./storeTab";
 import { ScrollArea } from "./ui/scroll-area";
 import LeaderboardTab from "./leaderboardTab";
 
-type Tab = "prompt" | "submissions" | "leaderboard" | "store";
+type Tab = "prompt" | "submissions" | "leaderboard" | "store" | "debug";
 
 function InfoPanel() {
 	const [tab, setTab] = useState<Tab>("prompt");
@@ -52,6 +52,7 @@ function InfoPanel() {
 					</TabsContent>
 					<TabsContent
 						value="submissions"
+						forceMount
 						style={{
 							display: tab !== "submissions" ? "none" : undefined,
 						}}
@@ -60,6 +61,7 @@ function InfoPanel() {
 					</TabsContent>
 					<TabsContent
 						value="leaderboard"
+						forceMount
 						style={{
 							display: tab !== "leaderboard" ? "none" : undefined,
 						}}
@@ -68,6 +70,7 @@ function InfoPanel() {
 					</TabsContent>
 					<TabsContent
 						value="store"
+						forceMount
 						style={{
 							display: tab !== "store" ? "none" : undefined,
 						}}
@@ -76,7 +79,15 @@ function InfoPanel() {
 					</TabsContent>
 
 					{debug && (
-						<TabsContent value="debug">{messages}</TabsContent>
+						<TabsContent
+							value="debug"
+							forceMount
+							style={{
+								display: tab !== "debug" ? "none" : undefined,
+							}}
+						>
+							{messages}
+						</TabsContent>
 					)}
 				</ScrollArea>
 			</div>
