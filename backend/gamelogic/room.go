@@ -87,7 +87,7 @@ func (r *room) run() {
 			}
 			if r.registerClient(client) {
 				r.countdownStop <- true
-                // TODO: figure this out
+				// TODO: figure this out
 				// go r.startTimer(Round1Time, r.round2Running, r.round1Running.timerStop)
 			}
 		case msg := <-r.roomRead:
@@ -109,8 +109,8 @@ func (s waitingForPlayers) handleClientMessage(msg m.ClientMessage) {
 	switch msg := msg.(type) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
-    case m.SkipLobbyMessage:
-        s.countdownStop <- true
+	case m.SkipLobbyMessage:
+		s.countdownStop <- true
 	}
 }
 

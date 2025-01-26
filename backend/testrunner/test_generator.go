@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-//restictions for reflectionData
-//-if put in a string with escape character, must do \\char instead of just \char
-//-types can be bool, int, float, string, list type(has a space)
-//-for boolean values, have them uppercase i.e. True, False
+// restictions for reflectionData
+// -if put in a string with escape character, must do \\char instead of just \char
+// -types can be bool, int, float, string, list type(has a space)
+// -for boolean values, have them uppercase i.e. True, False
 type reflectionData struct {
 	numParams       int
 	numCases        int
-	paramTypes      []string     
+	paramTypes      []string
 	cases           [][][]string //[case][parameter][item] item is just 0 for non lists
-	expectedResults []string //if return a list, each test case starts with a number saying number of values then is the sequence of values
+	expectedResults []string     //if return a list, each test case starts with a number saying number of values then is the sequence of values
 	methodName      string
 	returnType      string
 }
@@ -71,13 +71,13 @@ func collapseMe() {
 
 	// fmt.Println(generate(`string multipleParameters(int a, double b, vector<double> ls, bool c, string d){
 	// string answer="";
-    //     answer+=to_string(a);
-    //     answer+=to_string(b);
-    //     for(double i: ls)
-    //             answer+=to_string(i);
-    //     if(c)
-    //         answer+=d;
-    //     return answer;}
+	//     answer+=to_string(a);
+	//     answer+=to_string(b);
+	//     for(double i: ls)
+	//             answer+=to_string(i);
+	//     if(c)
+	//         answer+=d;
+	//     return answer;}
 	// `, "c++", "747474747", 4))
 
 	//javascript
@@ -117,7 +117,7 @@ func generate(userInput string, language string, magicNumber string, questionNum
 }
 
 func isNotAList(typee string) bool {
-	return len(typee)>5 && typee[4]==' '
+	return len(typee) > 5 && typee[4] == ' '
 }
 
 func generatePython(userInput, magicNumber string, r reflectionData) string {
@@ -145,7 +145,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	} else { //because methods returns a list, constructs a 2D list  {[],[],[]} where each [] contains the list for a test case
 		answer += "\texpected_results = ["
 		currentIndex := 0
-		for j := 0; j < r.numCases; j++ {//j=current test case
+		for j := 0; j < r.numCases; j++ { //j=current test case
 			answer += "["
 			lengthOfCurrentTestCase, _ := strconv.Atoi(r.expectedResults[currentIndex]) //get length of [] for the current test case
 			currentIndex++
@@ -196,7 +196,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	answer += "\tcases = [["
 	for i := 0; i < len(r.cases); i++ {
 		for j := 0; j < len(r.cases[i]); j++ {
-			if isNotAList(r.paramTypes[j]) {//if not a list just add the case data
+			if isNotAList(r.paramTypes[j]) { //if not a list just add the case data
 				if r.paramTypes[j] == "string" {
 					answer += "\""
 				}
@@ -224,7 +224,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	}
 	answer += "\tfor index, case in enumerate(cases):\n"
 	answer += "\t\ttry:\n"
-	//calls the method 
+	//calls the method
 	answer += "\t\t\tresult = "
 	answer += r.methodName + "("
 	for i := 0; i < r.numParams; i++ {
@@ -241,7 +241,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	answer += "\t\t\t\t\tmagic('WA')\n"
 	answer += "\t\t\telse:\n"
 	answer += "\t\t\t\tfailed=len(expected_results[index])!=len(result)\n"
-	answer += "\t\t\t\tfor i in range(len(expected_results[index])):\n"//if return a list, compare every element in both lists
+	answer += "\t\t\t\tfor i in range(len(expected_results[index])):\n" //if return a list, compare every element in both lists
 	answer += "\t\t\t\t\tif failed:\n"
 	answer += "\t\t\t\t\t\tbreak\n"
 	answer += "\t\t\t\t\tfailed = expected_results[index][i]!=result[i]\n"
@@ -390,7 +390,7 @@ func generateC(userInput, magicNumber string, r reflectionData) string {
 		}
 	}
 	answer += ");\n"
-	if isNotAList(r.returnType) {//Do it this way instead of printing both b/c having both causes errors in c++. It is also cleaner this way.
+	if isNotAList(r.returnType) { //Do it this way instead of printing both b/c having both causes errors in c++. It is also cleaner this way.
 		answer += "\t\t\t\tif (result == expected_results[index])\n"
 		answer += "\t\t\t\t\tmagic(\"AC\");\n"
 		answer += "\t\t\t\telse\n"
@@ -504,7 +504,7 @@ func generateJavacript(userInput, magicNumber string, r reflectionData) string {
 				if r.paramTypes[j] == "string" {
 					answer += "\""
 				}
-				if r.paramTypes[j]  == "bool" {
+				if r.paramTypes[j] == "bool" {
 					answer += strings.ToLower(string(r.cases[i][j][0]))
 				} else {
 					answer += r.cases[i][j][0]
