@@ -8,6 +8,7 @@ import (
 	"time"
 
 	m "leet-guys/messages"
+	tr "leet-guys/testrunner"
 )
 
 type clientId = int
@@ -61,10 +62,10 @@ func newRoom(id int) *room {
 	}
 
 	r.waitingForPlayers = waitingForPlayers{r, make(chan struct{})}
-	r.round1Running = round1Running{r, make(chan struct{})}
-	r.round2Running = round2Running{r, make(chan struct{})}
-	r.round3Running = round3Running{r, make(chan struct{})}
-	r.round4Running = round4Running{r, make(chan struct{})}
+	r.round1Running = round1Running{r, make(chan struct{}), 0, &tr.Questions[0]}
+	r.round2Running = round2Running{r, make(chan struct{}), 1, &tr.Questions[1]}
+	r.round3Running = round3Running{r, make(chan struct{}), 2, &tr.Questions[2]}
+	r.round4Running = round4Running{r, make(chan struct{}), 3, &tr.Questions[3]}
 	r.gameEnded = gameEnded{r}
 
 	return r
@@ -112,56 +113,82 @@ func (s waitingForPlayers) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round1Running struct {
-	r         *room
-	timerDone chan struct{}
+	r          *room
+	timerDone  chan struct{}
+	questionId int
+	question   *tr.QuestionData
 }
 
 func (s round1Running) handleClientMessage(msg m.ClientMessage) {
 	switch msg := msg.(type) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
+	case m.SubmitMessage:
+		if s.r.runTestRunner(msg, s.questionId) {
+			s.r.setClientDone(msg.PlayerId)
+		}
 	case m.SkipQuestionMessage:
 		s.timerDone <- struct{}{}
 	}
 }
 
 type round2Running struct {
-	r         *room
-	timerDone chan struct{}
+	r          *room
+	timerDone  chan struct{}
+	questionId int
+	question   *tr.QuestionData
 }
 
 func (s round2Running) handleClientMessage(msg m.ClientMessage) {
 	switch msg := msg.(type) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
+	case m.SubmitMessage:
+		if s.r.runTestRunner(msg, s.questionId) {
+			s.r.setClientDone(msg.PlayerId)
+		}
 	case m.SkipQuestionMessage:
 		s.timerDone <- struct{}{}
 	}
 }
 
 type round3Running struct {
-	r         *room
-	timerDone chan struct{}
+	r          *room
+	timerDone  chan struct{}
+	questionId int
+	question   *tr.QuestionData
 }
 
 func (s round3Running) handleClientMessage(msg m.ClientMessage) {
 	switch msg := msg.(type) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
+	case m.SubmitMessage:
+		// TODO:
+		if s.r.runTestRunner(msg, s.questionId) {
+			s.r.setClientDone(msg.PlayerId)
+		}
 	case m.SkipQuestionMessage:
 		s.timerDone <- struct{}{}
 	}
 }
 
 type round4Running struct {
-	r         *room
-	timerDone chan struct{}
+	r          *room
+	timerDone  chan struct{}
+	questionId int
+	question   *tr.QuestionData
 }
 
 func (s round4Running) handleClientMessage(msg m.ClientMessage) {
 	switch msg := msg.(type) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
+	case m.SubmitMessage:
+		if s.r.runTestRunner(msg, s.questionId) {
+            // TODO: declare a winner
+			s.r.setClientDone(msg.PlayerId)
+		}
 	case m.SkipQuestionMessage:
 		s.timerDone <- struct{}{}
 	}
@@ -175,13 +202,44 @@ func (s gameEnded) handleClientMessage(msg m.ClientMessage) {
 
 }
 
+func (r *room) runTestRunner(msg m.SubmitMessage, question int) bool {
+	var l tr.Language
+	switch msg.Language {
+	case "python":
+		l = tr.Python
+	case "javascript":
+		l = tr.Javascript
+	case "cpp":
+		l = tr.Javascript
+	}
+	res, err := tr.RunTest([]byte(msg.Code), l, question)
+	if err != nil {
+		log.Fatal(err)
+	}
+    fmt.Println("test result:", res)
+
+	r.sendMessageTo(msg.PlayerId, m.NewTestResultMessage(&res))
+
+	correct, total := res.NCorrect()
+
+	c := r.getClient(msg.PlayerId)
+	r.broadcast(m.NewUpdateClientStateMessage(
+		c.playerInfo(),
+		correct == total,
+		correct,
+		int(time.Now().Unix()),
+	))
+
+	return correct == total
+}
+
 func (r *room) setState(s roomState) {
 	switch s.(type) {
 	case waitingForPlayers:
 		go r.startCountdown(
 			RoomWait,
 			r.round1Running,
-			m.NewRoundStartMessage(1, Round1Time),
+			m.NewRoundStartMessage(1, Round1Time, r.round1Running.question),
 			r.waitingForPlayers.countdownDone,
 		)
 	case round1Running:
@@ -189,7 +247,7 @@ func (r *room) setState(s roomState) {
 			Round1Time,
 			r.round2Running,
 			m.NewRoundEndMessage(1),
-			m.NewRoundStartMessage(2, Round2Time),
+			m.NewRoundStartMessage(2, Round2Time, r.round2Running.question),
 			r.round1Running.timerDone,
 		)
 	case round2Running:
@@ -197,7 +255,7 @@ func (r *room) setState(s roomState) {
 			Round2Time,
 			r.round3Running,
 			m.NewRoundEndMessage(2),
-			m.NewRoundStartMessage(3, Round3Time),
+			m.NewRoundStartMessage(3, Round3Time, r.round3Running.question),
 			r.round2Running.timerDone,
 		)
 	case round3Running:
@@ -205,7 +263,7 @@ func (r *room) setState(s roomState) {
 			Round3Time,
 			r.round4Running,
 			m.NewRoundEndMessage(3),
-			m.NewRoundStartMessage(4, Round4Time),
+			m.NewRoundStartMessage(4, Round4Time, r.round4Running.question),
 			r.round3Running.timerDone,
 		)
 	case round4Running:
@@ -266,7 +324,7 @@ func (r *room) broadcast(msg m.ServerMessage) {
 	r.clientsMu.RUnlock()
 }
 
-func (r *room) sentMessageTo(clientId clientId, msg m.ServerMessage) {
+func (r *room) sendMessageTo(clientId clientId, msg m.ServerMessage) {
 	r.clientsMu.RLock()
 	r.clients[clientId].roomWrite <- msg
 	r.clientsMu.RUnlock()
@@ -299,6 +357,7 @@ func (r *room) startRoundTimer(
 
 	r.broadcast(endMessage)
 
+	r.resetDone()
 	go r.handleEliminations()
 	time.Sleep(RoundBetweenTime * time.Second)
 }
@@ -386,6 +445,13 @@ func (r *room) isRunning() bool {
 	running := r.state != nil
 	r.stateMu.Unlock()
 	return running
+}
+
+func (r *room) getClient(clientId clientId) *client {
+	r.clientsMu.RLock()
+	client := r.clients[clientId]
+	r.clientsMu.RUnlock()
+	return client
 }
 
 func (r *room) log(format string, v ...any) {

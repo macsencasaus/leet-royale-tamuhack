@@ -16,27 +16,29 @@ function useWebSocket(onMessage?: (message: any) => void) {
 
 	useEffect(() => {
 		if (onMessage && webSocket && connected) {
-			webSocket.addEventListener("message", _onMessage);
+			const handleMessage = (ev: MessageEvent) => {
+				const ms: Message = JSON.parse(ev.data);
+
+				if (ms.type === "ServerMessageHubGreeting") {
+					setPlayer(ms.player);
+				}
+
+				if (
+					gameState == "lobby" &&
+					ms.type === "ServerMessageRoundStart"
+				) {
+					setGameState("workspace");
+				}
+
+				onMessage(ms);
+			};
+
+			webSocket.addEventListener("message", handleMessage);
 			return () => {
-				webSocket.removeEventListener("message", _onMessage);
+				webSocket.removeEventListener("message", handleMessage);
 			};
 		}
 	}, [onMessage, webSocket, connected]);
-
-	function _onMessage(ev: MessageEvent) {
-		const ms: Message = JSON.parse(ev.data);
-		console.log(ms);
-
-		if (ms.type === "ServerMessageHubGreeting") {
-			setPlayer(ms.player);
-		}
-
-		if (gameState == "lobby" && ms.type === "ServerMessageRoundStart") {
-			setGameState("workspace");
-		}
-
-		onMessage!(ms);
-	}
 
 	function createWebSocket(address: string) {
 		const ws = new WebSocket(address);

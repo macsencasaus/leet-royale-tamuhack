@@ -38,7 +38,7 @@ func (m ClientQuitMessage) clientMessage() {}
 
 type SubmitMessage struct {
 	PlayerId int    `json:"playerId"`
-	Langauge string `json:"language"`
+	Language string `json:"language"`
 	Code     string `json:"code"`
 }
 

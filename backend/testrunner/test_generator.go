@@ -6,26 +6,35 @@ import (
 	"strings"
 )
 
-// restictions for reflectionData
+// restictions for QuestionData
 // -if put in a string with escape character, must do \\char instead of just \char
 // -types can be bool, int, float, string, list type(has a space)
 // -for boolean values, have them uppercase i.e. True, False
-type reflectionData struct {
+type QuestionData struct {
+	Title           string
 	numParams       int
-	numCases        int
+	NumCases        int
+    VisibleCases    int
 	paramTypes      []string
 	cases           [][][]string //[case][parameter][item] item is just 0 for non lists
 	expectedResults []string     //if return a list, each test case starts with a number saying number of values then is the sequence of values
 	methodName      string
 	returnType      string
+	Prompt          string
+	Templates       LanguageFunctionTemplates
 }
 
-var questionMap = map[int]reflectionData{
-	1: Q1, 2: Q2, 3: Q3, 4: Q4,
+var Questions = []QuestionData{
+	Q1, 
+    Q2,
+    Q3,
+    Q4,
 }
 
-var headerMap = map[int]map[string]string{
-	1: Q1Template, 2: Q2Template, 3: Q3Template, 4: Q4Template,
+type LanguageFunctionTemplates struct {
+	Python     string `json:"python"`
+	Javascript string `json:"javascript"`
+	Cpp        string `json:"cpp"`
 }
 
 var pythonToC = map[string]string{
@@ -105,7 +114,7 @@ func collapseMe() {
 
 func generate(userInput string, language Language, magicNumber string, questionNumber int) string {
 
-	r := questionMap[questionNumber]
+	r := Questions[questionNumber]
 	if language == CPP {
 		return generateC(userInput, magicNumber, r)
 	} else if language == Python {
@@ -120,7 +129,7 @@ func isNotAList(typee string) bool {
 	return !(len(typee) > 5 && typee[4] == ' ')
 }
 
-func generatePython(userInput, magicNumber string, r reflectionData) string {
+func generatePython(userInput, magicNumber string, r QuestionData) string {
 	answer := userInput
 	answer += "\n\n"
 	//random number print method Prints Like:user_output \nmagic_number\n result \nmagic_number\n...
@@ -145,7 +154,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	} else { //because methods returns a list, constructs a 2D list  {[],[],[]} where each [] contains the list for a test case
 		answer += "\texpected_results = ["
 		currentIndex := 0
-		for j := 0; j < r.numCases; j++ { //j=current test case
+		for j := 0; j < r.NumCases; j++ { //j=current test case
 			answer += "["
 			lengthOfCurrentTestCase, _ := strconv.Atoi(r.expectedResults[currentIndex]) //get length of [] for the current test case
 			currentIndex++
@@ -163,7 +172,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 				}
 			}
 			answer += "]"
-			if j+1 != r.numCases {
+			if j+1 != r.NumCases {
 				answer += ","
 			}
 		}
@@ -174,7 +183,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	for i := 0; i < len(r.paramTypes); i++ { //i=currentParameter
 		if !(isNotAList(r.paramTypes[i])) {
 			//Lists have the name: a<testCaseNumber>_<parameterNumber>
-			for j := 0; j < r.numCases; j++ { //j==current_Case
+			for j := 0; j < r.NumCases; j++ { //j==current_Case
 				answer += "\ta" + strconv.Itoa(j) + "_" + strconv.Itoa(i) + " = ["
 				for k := 0; k < len(r.cases[j][i]); k++ {
 					if r.paramTypes[i] == "list string" {
@@ -255,7 +264,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	return answer
 }
 
-func generateC(userInput, magicNumber string, r reflectionData) string {
+func generateC(userInput, magicNumber string, r QuestionData) string {
 	answer := "#include<vector>\n#include<string>\n#include<iostream>\nusing namespace std;\n#include <tuple>\n\n"
 	answer += userInput
 	answer += "\n\n"
@@ -287,7 +296,7 @@ func generateC(userInput, magicNumber string, r reflectionData) string {
 	} else { //forming expected results as list of lists//results array
 		answer += "\tvector<" + pythonToC[r.returnType] + "> expected_results = {"
 		currentIndex := 0
-		for j := 0; j < r.numCases; j++ {
+		for j := 0; j < r.NumCases; j++ {
 			answer += "{"
 			lengthOfCurrentTestCase, _ := strconv.Atoi(r.expectedResults[currentIndex]) //get length of this test cases's array
 			currentIndex++
@@ -309,7 +318,7 @@ func generateC(userInput, magicNumber string, r reflectionData) string {
 				}
 			}
 			answer += "}"
-			if j+1 != r.numCases {
+			if j+1 != r.NumCases {
 				answer += ","
 			}
 		}
@@ -320,7 +329,7 @@ func generateC(userInput, magicNumber string, r reflectionData) string {
 	for i := 0; i < len(r.paramTypes); i++ { //i=current_paramter
 		if !(isNotAList(r.paramTypes[i])) {
 			//initializes lists and such with name: a<test_case_number>_<parameter_number>
-			for j := 0; j < r.numCases; j++ { //j==current_case
+			for j := 0; j < r.NumCases; j++ { //j==current_case
 				answer += "\t" + pythonToC[r.paramTypes[i]] + " a" + strconv.Itoa(j) + "_" + strconv.Itoa(i) + " = {"
 				for k := 0; k < len(r.cases[j][i]); k++ {
 					if r.paramTypes[i] == "list string" {
@@ -411,12 +420,12 @@ func generateC(userInput, magicNumber string, r reflectionData) string {
 	return answer
 }
 
-func generateJavacript(userInput, magicNumber string, r reflectionData) string {
+func generateJavacript(userInput, magicNumber string, r QuestionData) string {
 	answer := userInput
 	answer += "\n\n"
 	//random number print method Follows:user_output \nmagic_number\n result \nmagic_number\n user_output...
 	answer += "function magic(thingToPrint){\n"
-	answer += "\tconsole.log(\"\\n\"+" + magicNumber + "+\"\\n\"+thingToPrint+\"\\n\"+" + magicNumber + ");}\n\n"
+	answer += "\tconsole.log(\"\\n" + magicNumber + "\\n\"+thingToPrint+\"\\n" + magicNumber + "\");}\n\n"
 	answer += "function main(){\n"
 	//results array
 	if isNotAList(r.returnType) {
@@ -440,7 +449,7 @@ func generateJavacript(userInput, magicNumber string, r reflectionData) string {
 	} else { //forming expected results as list of lists
 		answer += "\tlet expected_results = ["
 		currentIndex := 0
-		for j := 0; j < r.numCases; j++ {
+		for j := 0; j < r.NumCases; j++ {
 			answer += "["
 			lengthOfCurrentTestCase, _ := strconv.Atoi(r.expectedResults[currentIndex]) //get length of this test cases's array
 			currentIndex++
@@ -462,7 +471,7 @@ func generateJavacript(userInput, magicNumber string, r reflectionData) string {
 				}
 			}
 			answer += "]"
-			if j+1 != r.numCases {
+			if j+1 != r.NumCases {
 				answer += ","
 			}
 		}
@@ -473,7 +482,7 @@ func generateJavacript(userInput, magicNumber string, r reflectionData) string {
 	for i := 0; i < len(r.paramTypes); i++ { //i=current_paramter
 		if !(isNotAList(r.paramTypes[i])) {
 			//initializes lists and such with name: a<test_case_number>_<parameter_number>
-			for j := 0; j < r.numCases; j++ { //j==current_Case
+			for j := 0; j < r.NumCases; j++ { //j==current_Case
 				answer += "\tlet a" + strconv.Itoa(j) + "_" + strconv.Itoa(i) + " = ["
 				for k := 0; k < len(r.cases[j][i]); k++ {
 					if r.paramTypes[i] == "list string" {

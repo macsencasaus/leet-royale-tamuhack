@@ -1,5 +1,7 @@
 package messages
 
+import tr "leet-guys/testrunner"
+
 type ServerMessageType string
 
 const (
@@ -10,8 +12,7 @@ const (
 	ServerMessageClientLeft         = "ServerMessageClientLeft"
 	ServerMessageRoundStart         = "ServerMessageRoundStart"
 	ServerMessageRoundEnd           = "ServerMessageRoundEnd"
-	ServerMessageTestPassed         = "ServerMessageTestPassed"
-	ServerMessageTestFailed         = "ServerMessageTestFailed"
+	ServerMessageTestResult         = "ServerMessageTestResult"
 	ServerMessageUpdateClientStatus = "ServerMessageUpdateClientStatus"
 	ServerMessageClientEliminated   = "ServerMessageClientEliminated"
 )
@@ -88,28 +89,29 @@ func NewClientLeftMessage(player PlayerInfo) ClientLeftMessage {
 func (m ClientLeftMessage) serverMessage() {}
 
 type RoundStartMessage struct {
-	Type             ServerMessageType        `json:"type"`
-	Round            int                      `json:"round"`
-	Time             int                      `json:"time"`
-	Prompt           string                   `json:"prompt"`
-	Templates        languageFunctionTemplate `json:"templates"`
-	NumTestCases     int                      `json:"numTestCases"`
-	VisibleTestCases []testCase               `json:"visibleTestCases"`
+	Type             ServerMessageType            `json:"type"`
+	Round            int                          `json:"round"`
+	Time             int                          `json:"time"`
+	Prompt           string                       `json:"prompt"`
+	Templates        tr.LanguageFunctionTemplates `json:"templates"`
+	NumTestCases     int                          `json:"numTestCases"`
+	VisibleTestCases []TestCase                   `json:"visibleTestCases"`
 }
 
-func NewRoundStartMessage(round int, sec int) RoundStartMessage {
+func NewRoundStartMessage(
+	round int,
+	sec int,
+	rd *tr.QuestionData,
+) RoundStartMessage {
 	return RoundStartMessage{
-		Type:   ServerMessageRoundStart,
-		Round:  round,
-		Time:   sec,
-		Prompt: "<p>Add two numbers.<p>",
-		Templates: languageFunctionTemplate{
-			Python:     "def add(a, b):\n\t",
-			Javascript: "function add(a, b){\n\t\n}",
-			Cpp:        "int add(int a, int b){\n\t\n}",
-		},
-		NumTestCases: 20,
-		VisibleTestCases: []testCase{
+		Type:         ServerMessageRoundStart,
+		Round:        round,
+		Time:         sec,
+		Prompt:       rd.Prompt,
+		Templates:    rd.Templates,
+		NumTestCases: rd.NumCases,
+		// TODO:
+		VisibleTestCases: []TestCase{
 			{
 				Input:  "1, 2",
 				Output: "3",
@@ -140,49 +142,55 @@ func NewRoundEndMessage(round int) RoundEndMessage {
 }
 func (m RoundEndMessage) serverMessage() {}
 
-type TestPassedMessage struct {
-	Type     ServerMessageType `json:"type"`
-	Question string            `json:"question"`
+type TestResultMessage struct {
+	Type  ServerMessageType `json:"type"`
+	TLE   bool              `json:"tle"`
+	Cases []ResultCase      `json:"cases"`
 }
 
-func NewTestPassedMessage(question string) TestPassedMessage {
-	return TestPassedMessage{
-		Type:     ServerMessageTestPassed,
-		Question: question,
+// TODO:
+func NewTestResultMessage(res *tr.Result) TestResultMessage {
+	var tle bool
+
+	tle = res.Issue == tr.CompileTime || res.Issue == tr.RunTime
+
+	resCases := make([]ResultCase, 0, res.NCasesRun)
+
+	for i, status := range res.PFStatus {
+		resCases = append(resCases, ResultCase{
+			Success: status == tr.AC,
+			Stdout:  string(res.Stdout[i]),
+		})
+	}
+
+	return TestResultMessage{
+		Type:  ServerMessageTestResult,
+		TLE:   tle,
+		Cases: resCases,
 	}
 }
-func (m TestPassedMessage) serverMessage() {}
-
-type TestFailedMessage struct {
-	Type     ServerMessageType `json:"type"`
-	Question string            `json:"question"`
-	// TODO: add failure reason
-}
-
-func NewTestFailedMessage(question string) TestFailedMessage {
-	return TestFailedMessage{
-		Type:     ServerMessageTestFailed,
-		Question: question,
-	}
-}
-func (m TestFailedMessage) servermessage() {}
+func (m TestResultMessage) serverMessage() {}
 
 type UpdateClientStatus struct {
-	Type               ServerMessageType `json:"type"`
-	Player             PlayerInfo        `json:"player"`
-	Finished           bool              `json:"finished"`
-	QuestionsCompleted int               `json:"questionsCompleted"`
+	Type           ServerMessageType `json:"type"`
+	Player         PlayerInfo        `json:"player"`
+	Finished       bool              `json:"finished"`
+	CasesCompleted int               `json:"questionsCompleted"`
+	Timestamp      int               `json:"timestamp"`
 }
 
 func NewUpdateClientStateMessage(
 	player PlayerInfo,
 	finished bool,
-	questionsCompleted int,
+	casesCompleted int,
+    timestamp int,
 ) UpdateClientStatus {
 	return UpdateClientStatus{
-		Player:             player,
-		Finished:           finished,
-		QuestionsCompleted: questionsCompleted,
+		Type:           ServerMessageUpdateClientStatus,
+		Player:         player,
+		Finished:       finished,
+		CasesCompleted: casesCompleted,
+        Timestamp: timestamp,
 	}
 }
 func (m UpdateClientStatus) serverMessage() {}
@@ -200,6 +208,7 @@ func NewClientEliminatedMessage(
 	totalPlayers int,
 ) ClientEliminatedMessage {
 	return ClientEliminatedMessage{
+		Type:         ServerMessageClientEliminated,
 		Player:       player,
 		Place:        place,
 		TotalPlayers: totalPlayers,
@@ -213,13 +222,18 @@ type PlayerInfo struct {
 	Name string `json:"name"`
 }
 
-type languageFunctionTemplate struct {
+type LanguageFunctionTemplate struct {
 	Python     string `json:"python"`
 	Javascript string `json:"javascript"`
 	Cpp        string `json:"cpp"`
 }
 
-type testCase struct {
+type TestCase struct {
 	Input  string `json:"input"`
 	Output string `json:"output"`
+}
+
+type ResultCase struct {
+	Success bool   `json:"success"`
+	Stdout  string `json:"stdout"`
 }
