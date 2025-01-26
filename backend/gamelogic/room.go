@@ -62,10 +62,10 @@ func newRoom(id int) *room {
 	}
 
 	r.waitingForPlayers = waitingForPlayers{r, make(chan struct{})}
-	r.round1Running = round1Running{r, make(chan struct{}), 1, &tr.Questions[1]}
-	r.round2Running = round2Running{r, make(chan struct{}), 2, &tr.Questions[2]}
-	r.round3Running = round3Running{r, make(chan struct{}), 3, &tr.Questions[3]}
-	r.round4Running = round4Running{r, make(chan struct{}), 4, &tr.Questions[4]}
+	r.round1Running = round1Running{r, make(chan struct{}), 0, &tr.Questions[0]}
+	r.round2Running = round2Running{r, make(chan struct{}), 1, &tr.Questions[1]}
+	r.round3Running = round3Running{r, make(chan struct{}), 2, &tr.Questions[2]}
+	r.round4Running = round4Running{r, make(chan struct{}), 3, &tr.Questions[3]}
 	r.gameEnded = gameEnded{r}
 
 	return r
