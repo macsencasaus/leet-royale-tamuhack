@@ -10,12 +10,17 @@ function useWebSocket(onMessage?: (message: any) => void) {
 		if (onMessage && webSocket && connected) {
 			console.trace("Listening for messages");
 
-			webSocket.addEventListener("message", onMessage);
+			webSocket.addEventListener("message", _onMessage);
 			return () => {
-				webSocket.removeEventListener("message", onMessage);
+				webSocket.removeEventListener("message", _onMessage);
 			};
 		}
 	}, [onMessage, webSocket, connected]);
+
+	function _onMessage(ev: MessageEvent) {
+		const ms = ev.data;
+		onMessage!(JSON.parse(ms));
+	}
 
 	function createWebSocket(address: string) {
 		const ws = new WebSocket(address);
