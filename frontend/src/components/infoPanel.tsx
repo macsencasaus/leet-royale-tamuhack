@@ -1,5 +1,4 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { debug } from "@/config";
 import useWebSocket from "@/hooks/useWebSocket";
 import { Message } from "@/lib/types";
 import { useCallback, useState } from "react";
@@ -9,7 +8,7 @@ import StoreTab from "./storeTab";
 import { ScrollArea } from "./ui/scroll-area";
 import LeaderboardTab from "./leaderboardTab";
 
-type Tab = "prompt" | "submissions" | "leaderboard" | "store" | "debug";
+type Tab = "prompt" | "submissions" | "leaderboard" | "store";
 
 function InfoPanel() {
 	const [tab, setTab] = useState<Tab>("prompt");
@@ -17,7 +16,14 @@ function InfoPanel() {
 	const onMessage = useCallback((message: Message) => {
 		switch (message.type) {
 			case "ServerMessageTestResult":
-				setTab("submissions");
+				for (const c of message.cases) {
+					if (!c.success) {
+						setTab("submissions");
+						return;
+					}
+				}
+
+				setTab("leaderboard");
 				break;
 		}
 	}, []);
@@ -26,7 +32,7 @@ function InfoPanel() {
 
 	return (
 		<Tabs
-			defaultValue={debug ? "prompt" : "prompt"}
+			defaultValue={"prompt"}
 			className="flex flex-col h-full"
 			value={tab}
 			onValueChange={(value) => setTab(value as Tab)}
@@ -37,8 +43,6 @@ function InfoPanel() {
 					<TabsTrigger value="submissions">Submission</TabsTrigger>
 					<TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
 					<TabsTrigger value="store">Store</TabsTrigger>
-
-					{debug && <TabsTrigger value="debug">Debug</TabsTrigger>}
 				</TabsList>
 			</div>
 

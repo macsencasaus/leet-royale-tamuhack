@@ -7,6 +7,7 @@ import { GameState, Player } from "./lib/types";
 import Logger from "./components/logger";
 import { debug } from "./config";
 import Eliminated from "./components/eliminated";
+import Particles from "./components/particles";
 
 function App() {
 	const [gameState, setGameState] = useState<GameState>("login");
@@ -29,7 +30,8 @@ function App() {
 				setPlayer,
 			}}
 		>
-			<div className="flex flex-col w-dvh h-dvh p-2 gap-2">
+			{gameState !== "workspace" && <Particles />}
+			<div className="flex flex-col w-dvh h-dvh p-2 gap-2 relative z-1">
 				{!connected && <Login />}
 				{connected && (
 					<>
@@ -38,11 +40,11 @@ function App() {
 					</>
 				)}
 				<Eliminated />
+				{debug && <Logger />}
 
 				{/* <Lobby force /> */}
 				{/* <Workspace force /> */}
 				{/* <Eliminated /> */}
-				{debug && <Logger />}
 			</div>
 		</WebSocketContext.Provider>
 	);
