@@ -19,6 +19,7 @@ const (
 	ServerMessageTestResult         = "ServerMessageTestResult"
 	ServerMessageUpdateClientStatus = "ServerMessageUpdateClientStatus"
 	ServerMessageClientEliminated   = "ServerMessageClientEliminated"
+	ServerMessageWinner             = "ServerMessageWinner"
 )
 
 type ServerMessage interface {
@@ -127,10 +128,10 @@ func NewRoundStartMessage(
 func (m RoundStartMessage) serverMessage() {}
 
 type RoundEndMessage struct {
-	Type  ServerMessageType `json:"type"`
-	Round int               `json:"round"`
-    CurrentPlayers []PlayerInfo `json:"currentPlayers"`
-    EliminatedPlayers []PlayerInfo `json:"eliminatedPlayers"`
+	Type              ServerMessageType `json:"type"`
+	Round             int               `json:"round"`
+	CurrentPlayers    []PlayerInfo      `json:"currentPlayers"`
+	EliminatedPlayers []PlayerInfo      `json:"eliminatedPlayers"`
 }
 
 func NewRoundEndMessage(round int) RoundEndMessage {
@@ -216,6 +217,18 @@ func NewClientEliminatedMessage(
 }
 
 func (m ClientEliminatedMessage) serverMessage() {}
+
+type WinnerMessage struct {
+	Type ServerMessageType `json:"type"`
+}
+
+func NewWinnerMessage() WinnerMessage {
+	return WinnerMessage{
+		Type: ServerMessageWinner,
+	}
+}
+
+func (m WinnerMessage) serverMessage() {}
 
 type PlayerInfo struct {
 	Id   int    `json:"id"`

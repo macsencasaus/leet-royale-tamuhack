@@ -201,6 +201,7 @@ func (s round4Running) handleClientMessage(msg m.ClientMessage) {
 	case m.SubmitMessage:
 		if s.r.runTestRunner(msg, s.questionId) {
 			s.r.setClientDone(msg.PlayerId)
+            s.r.sendMessageTo(msg.PlayerId, m.NewWinnerMessage())
 			s.timerDone <- struct{}{}
 		}
 	case m.SkipQuestionMessage:
