@@ -176,7 +176,7 @@ func (r *room) startTimer(sec int, successState roomState, stop chan bool) {
 		close(stop)
 	}()
 
-	ticker := time.NewTicker(time.Duration(sec) * 1000)
+	ticker := time.NewTicker(time.Duration(sec) * time.Second)
 
 	for {
 		select {
@@ -197,7 +197,7 @@ func (r *room) startCountDown(sec int, successState roomState, stop chan bool) {
 		close(stop)
 	}()
 
-	ticker := time.NewTicker(1000)
+	ticker := time.NewTicker(time.Second)
 
 	for i := sec; i >= 1; i++ {
 		select {
