@@ -117,7 +117,7 @@ func generate(userInput string, language Language, magicNumber string, questionN
 }
 
 func isNotAList(typee string) bool {
-	return len(typee) > 5 && typee[4] == ' '
+	return ! (len(typee) > 5 && typee[4] == ' ')
 }
 
 func generatePython(userInput, magicNumber string, r reflectionData) string {
@@ -125,7 +125,7 @@ func generatePython(userInput, magicNumber string, r reflectionData) string {
 	answer += "\n\n"
 	//random number print method Prints Like:user_output \nmagic_number\n result \nmagic_number\n...
 	answer += "def magic(thingToPrint):\n"
-	answer += "\tprint('\\n',str('" + string(magicNumber) + "'),'\\n',thingToPrint,'\\n',str('" + string(magicNumber) + "'),'\\n',sep='')\n\n"
+	answer += "\tprint('\\n',str('" + string(magicNumber) + "'),'\\n',thingToPrint,'\\n',str('" + string(magicNumber) + "'),'\\n',sep='',end='')\n\n"
 	answer += "def main():\n"
 	//constructs the expected results array
 	if isNotAList(r.returnType) {
@@ -416,7 +416,7 @@ func generateJavacript(userInput, magicNumber string, r reflectionData) string {
 	answer += "\n\n"
 	//random number print method Follows:user_output \nmagic_number\n result \nmagic_number\n user_output...
 	answer += "function magic(thingToPrint){\n"
-	answer += "\tconsole.log(\"\\n\"+" + magicNumber + "+\"\\n\"+thingToPrint+\"\\n\"+" + magicNumber + "+\"\\n\");}\n\n"
+	answer += "\tconsole.log(\"\\n\"+" + magicNumber + "+\"\\n\"+thingToPrint+\"\\n\"+" + magicNumber + ");}\n\n"
 	answer += "function main(){\n"
 	//results array
 	if isNotAList(r.returnType) {

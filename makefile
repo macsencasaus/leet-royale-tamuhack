@@ -5,7 +5,7 @@ build: front
 	cd backend && go build
 
 front:
-	cd frontend && npm run build
+	cd frontend && npm install --dev && npm run build
 
 fmt:
 	cd backend && gofmt -l -s -w .

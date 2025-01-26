@@ -252,10 +252,7 @@ func RunProblemTest(fileContent []byte, lang Language, magic int64) (Result, err
 	}
 
 	var sections [][]byte = bytes.Split(streamOut, []byte(magicString))
-	for i := 0; i < len(sections); i += 2 {
-		if len(sections[i]) == 0 {
-			continue
-		}
+	for i := 0; i < (len(sections) / 2) * 2; i += 2 {
 		testCasesRun++
 		testCaseProgramOut = append(testCaseProgramOut, sections[i])
 		testCaseStatus = append(testCaseStatus, statusFromCode(sections[i+1]))

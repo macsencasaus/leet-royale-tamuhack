@@ -185,3 +185,12 @@ func TestRunProblemTest_happy(t *testing.T) {
 		}
 	}
 }
+
+func Test_q1(t *testing.T) {
+    file :=`
+def add(a, b):
+    return a + b
+`
+    res, err := RunTest([]byte(file), Python, 1)
+    t.Log(res, err)
+}
