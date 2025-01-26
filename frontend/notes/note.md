@@ -23,3 +23,18 @@
 # Fix
 
 -   Send message with everyone left
+
+# Items
+
+-   Chat GPT assist
+
+-   Chat GPT sabotage
+-   Light mode
+-   DvD logo
+-   Remove semicolons (c++) / braces (js) / indentation (py)
+-   Remove random line
+-   Remove ctrl+z
+-   Insert only, remove delete / backspace
+-   Ad Space (pop-up ads)
+-   Arrow key only movement
+-   Freeze coding

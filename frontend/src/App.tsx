@@ -8,6 +8,7 @@ import Logger from "./components/logger";
 import { debug } from "./config";
 import Eliminated from "./components/eliminated";
 import Particles from "./components/particles";
+import Winner from "./components/winner";
 
 function App() {
 	const [gameState, setGameState] = useState<GameState>("login");
@@ -40,6 +41,7 @@ function App() {
 					</>
 				)}
 				<Eliminated />
+				<Winner />
 				{debug && <Logger />}
 
 				{/* <Lobby force /> */}

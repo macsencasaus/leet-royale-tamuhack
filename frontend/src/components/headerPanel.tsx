@@ -55,7 +55,7 @@ function HeaderPanel() {
 
 	return (
 		<div className="border border-white/10 bg-border rounded p-2 px-4 flex justify-between">
-			<h1 className="font-bold">LeetGuys</h1>
+			<h1 className="font-bold">Leet Royale</h1>
 			<p className="font-bold">Round {round}</p>
 			{formatTime(timeLeft)}
 		</div>
