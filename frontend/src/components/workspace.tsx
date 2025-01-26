@@ -15,7 +15,7 @@ function Workspace() {
 	return (
 		<div
 			className={`flex flex-col gap-1 h-full ${
-				gameState === "workspace" ? "hidden" : ""
+				gameState !== "workspace" ? "hidden" : ""
 			}`}
 		>
 			<HeaderPanel />

@@ -42,7 +42,7 @@ function Lobby() {
 	return (
 		<div
 			className={`flex justify-center h-full items-center ${
-				gameState === "lobby" ? "hidden" : ""
+				gameState !== "lobby" ? "hidden" : ""
 			}`}
 		>
 			<Card className="w-screen max-w-xs">
