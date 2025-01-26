@@ -15,7 +15,7 @@ function PromptTab() {
 
 	useWebSocket(onMessage);
 
-	return <p dangerouslySetInnerHTML={{ __html: prompt }}></p>;
+	return <div dangerouslySetInnerHTML={{ __html: prompt }}></div>;
 }
 
 export default PromptTab;

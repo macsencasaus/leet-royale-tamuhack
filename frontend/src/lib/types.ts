@@ -7,6 +7,7 @@ export type MessageType =
 	| "ClientMessageSubmit"
 	| "ClientMessageSkipLobby"
 	| "ClientMessageSkipQuestion"
+	| "ClientMessageBuyItem"
 	| "ServerMessageHubGreeting"
 	| "ServerMessageRoomGreeting"
 	| "ServerMessageCountdown"
@@ -14,8 +15,9 @@ export type MessageType =
 	| "ServerMessageClientLeft"
 	| "ServerMessageRoundStart"
 	| "ServerMessageRoundEnd"
-	| "ServerMessageTestPassed"
-	| "ServerMessageTestFailed";
+	| "ServerMessageTestResult"
+	| "ServerMessageUpdateClientStatus"
+	| "ServerMessageClientEliminated";
 
 export interface Message {
 	type: MessageType;
@@ -35,9 +37,12 @@ export interface Message {
 	};
 	numTestCases: number;
 	visibleTestCases: { input: string; output: string }[];
-	question: string;
 	tle: boolean;
-	cases: {}[];
+	cases: TestCase[];
+	finished: boolean;
+	casesCompleted: number;
+	place: number;
+	totalPlayers: number;
 }
 
 export interface Player {
@@ -45,12 +50,19 @@ export interface Player {
 	name: string;
 }
 
-export interface TestCases {
+export interface TestCase {
 	success: boolean;
+	stdout: string;
 }
 
 export interface Templates {
-    python: string;
-    javascript: string;
-    cpp: string;
+	python: string;
+	javascript: string;
+	cpp: string;
+}
+
+export interface PlayerStatus {
+	player: Player;
+	finished: boolean;
+	casesCompleted: number;
 }

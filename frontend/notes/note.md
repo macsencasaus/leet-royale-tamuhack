@@ -22,3 +22,6 @@
 
 # Fix
 - Kahoot leaderboard
+
+- Pass and fail both visible and invisible test cases
+    - 50% chance to have this or just pass everything

@@ -1,6 +1,6 @@
 import useWebSocket from "@/hooks/useWebSocket";
 import { Message } from "@/lib/types";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 function HeaderPanel() {
 	const [round, setRound] = useState(0);
@@ -19,6 +19,18 @@ function HeaderPanel() {
 	}, []);
 
 	useWebSocket(onMessage);
+
+	useEffect(() => {
+		if (timeLeft === undefined) {
+			return;
+		}
+
+		const timer = setTimeout(() => {
+			setTimeLeft((prev) => (prev !== undefined ? prev - 1 : undefined));
+		}, 1000);
+
+		return () => clearTimeout(timer);
+	}, [timeLeft]);
 
 	function formatTime(seconds: number | undefined) {
 		if (seconds === undefined) {
