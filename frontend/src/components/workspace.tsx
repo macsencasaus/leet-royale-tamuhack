@@ -12,7 +12,7 @@ import { Message } from "@/lib/types";
 import Breather from "./breather";
 
 function Workspace({ force }: { force?: boolean }) {
-	const [waiting, setWaiting] = useState(true);
+	const [waiting, setWaiting] = useState(false);
 
 	const onMessage = useCallback((message: Message) => {
 		switch (message.type) {

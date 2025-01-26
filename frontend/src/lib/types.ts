@@ -1,4 +1,4 @@
-export type GameState = "login" | "lobby" | "workspace" | "eliminated";
+export type GameState = "login" | "lobby" | "workspace" | "eliminated" | "winner";
 
 export type Languages = "python" | "javascript" | "cpp";
 export type MessageType =
@@ -8,6 +8,7 @@ export type MessageType =
 	| "ClientMessageSkipLobby"
 	| "ClientMessageSkipQuestion"
 	| "ClientMessageBuyItem"
+	| "ServerMessageClientItem"
 	| "ServerMessageHubGreeting"
 	| "ServerMessageRoomGreeting"
 	| "ServerMessageCountdown"
@@ -17,7 +18,8 @@ export type MessageType =
 	| "ServerMessageRoundEnd"
 	| "ServerMessageTestResult"
 	| "ServerMessageUpdateClientStatus"
-	| "ServerMessageClientEliminated";
+	| "ServerMessageClientEliminated"
+	| "ServerMessageWinner";
 
 export interface Message {
 	type: MessageType;
@@ -44,6 +46,9 @@ export interface Message {
 	place: number;
 	totalPlayers: number;
 	timestamp: number;
+	item: Items;
+	currentPlayers: Player[];
+	eliminatedPlayers: Player[];
 }
 
 export interface Player {
@@ -73,3 +78,12 @@ export interface VisibleCases {
 	input: string;
 	output: string;
 }
+
+export type Items =
+	| "light-mode"
+	| "dvd-logo"
+	| "ad-space"
+	| "freeze"
+	| "remove-all"
+	| "remove-line"
+	| "arrow-only";

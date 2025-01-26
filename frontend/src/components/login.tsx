@@ -31,7 +31,7 @@ function Login() {
 			<form onSubmit={connect}>
 				<Card className="w-screen max-w-xs">
 					<CardHeader>
-						<CardTitle>Leet Royale</CardTitle>
+						<CardTitle className="flex gap-2 items-center"><img src="/leetroyale.png" className="h-8 w-8"/>Leet Royale</CardTitle>
 						<CardDescription>
 							LeetCode has never been more fun.
 						</CardDescription>
