@@ -48,7 +48,7 @@ function LeaderboardTab() {
 
 				setPlayers((prev) => ({
 					...prev,
-					next,
+					...next,
 				}));
 
 				break;
