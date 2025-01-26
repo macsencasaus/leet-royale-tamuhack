@@ -42,6 +42,16 @@ type Result struct {
 	PFStatus  []TestCaseStatus
 }
 
+func (r Result) NCorrect() (int, int) {
+    correct := 0
+    for _, status := range r.PFStatus {
+        if status == AC {
+            correct++
+        }
+    }
+    return correct, len(r.PFStatus)
+}
+
 func statusFromCode(letters []byte) TestCaseStatus {
 	if bytes.Compare(letters, []byte("AC")) == 0 {
 		return AC
