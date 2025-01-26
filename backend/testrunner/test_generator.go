@@ -14,7 +14,7 @@ type QuestionData struct {
 	Title           string
 	numParams       int
 	NumCases        int
-    VisibleCases    int
+	VisibleCases    int
 	paramTypes      []string
 	Cases           [][][]string //[case][parameter][item] item is just 0 for non lists
 	ExpectedResults []string     //if return a list, each test case starts with a number saying number of values then is the sequence of values
@@ -25,10 +25,14 @@ type QuestionData struct {
 }
 
 var Questions = []QuestionData{
-	Q1, 
-    Q2,
-    Q3,
-    Q4,
+	Q1,
+	Q2,
+	Q3,
+	Q4,
+	Q5,
+	Q6,
+	Q7,
+	Q8,
 }
 
 type LanguageFunctionTemplates struct {
