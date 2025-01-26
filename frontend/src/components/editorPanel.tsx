@@ -7,6 +7,12 @@ import { Button } from "./ui/button";
 import useWebSocket from "@/hooks/useWebSocket";
 import { demo } from "@/config";
 
+// const template: Templates = {
+// 	javascript: "// js",
+// 	cpp: "// cpp",
+// 	python: "# py",
+// };
+
 function EditorPanel() {
 	const [templates, setTemplates] = useState<Templates | undefined>(
 		undefined
@@ -22,6 +28,7 @@ function EditorPanel() {
 		switch (message.type) {
 			case "ServerMessageRoundStart":
 				setTemplates(message.templates);
+				setCode(message.templates);
 				break;
 			case "ServerMessageRoundEnd":
 				setTemplates(undefined);
@@ -31,22 +38,29 @@ function EditorPanel() {
 
 	const { player, sendMessage } = useWebSocket(onMessage);
 
-	function onCode(code: string | undefined) {
+	function onCode(_c: string | undefined) {
+		const next: any = {};
+		next[language] = _c;
 		setCode((prev) => {
+			console.log({
+				...prev,
+				...next,
+			});
+
 			return {
 				...prev,
-				language: code,
+				...next,
 			};
 		});
 	}
 
 	function submitCode() {
+		console.log(code);
+
 		sendMessage("ClientMessageSubmit", {
-			data: {
-				playerId: player?.id,
-				language,
-				code: code[language],
-			},
+			playerId: player?.id,
+			language,
+			code: code[language],
 		});
 	}
 
