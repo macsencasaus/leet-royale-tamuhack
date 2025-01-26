@@ -13,11 +13,13 @@ type Tab = "prompt" | "submissions" | "leaderboard" | "store" | "debug";
 
 function InfoPanel() {
 	const [tab, setTab] = useState<Tab>("prompt");
-	const [messages, setMessages] = useState<string[]>([]);
 
 	const onMessage = useCallback((message: Message) => {
-		const next = messages.concat([JSON.stringify(message)]);
-		setMessages(next);
+		switch (message.type) {
+			case "ServerMessageTestResult":
+				setTab("submissions");
+				break;
+		}
 	}, []);
 
 	useWebSocket(onMessage);
@@ -26,6 +28,7 @@ function InfoPanel() {
 		<Tabs
 			defaultValue={debug ? "prompt" : "prompt"}
 			className="flex flex-col h-full"
+			value={tab}
 			onValueChange={(value) => setTab(value as Tab)}
 		>
 			<div className="bg-border overflow-hidden -m-2 p-1 flex-none">
@@ -77,18 +80,6 @@ function InfoPanel() {
 					>
 						<StoreTab />
 					</TabsContent>
-
-					{debug && (
-						<TabsContent
-							value="debug"
-							forceMount
-							style={{
-								display: tab !== "debug" ? "none" : undefined,
-							}}
-						>
-							{messages}
-						</TabsContent>
-					)}
 				</ScrollArea>
 			</div>
 		</Tabs>

@@ -6,6 +6,7 @@ import Lobby from "./components/lobby";
 import { GameState, Player } from "./lib/types";
 import Logger from "./components/logger";
 import { debug } from "./config";
+import Eliminated from "./components/eliminated";
 
 function App() {
 	const [gameState, setGameState] = useState<GameState>("login");
@@ -36,9 +37,11 @@ function App() {
 						<Workspace />
 					</>
 				)}
+				<Eliminated />
 
 				{/* <Lobby force /> */}
 				{/* <Workspace force /> */}
+				{/* <Eliminated /> */}
 				{debug && <Logger />}
 			</div>
 		</WebSocketContext.Provider>

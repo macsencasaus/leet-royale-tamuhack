@@ -30,6 +30,10 @@ function useWebSocket(onMessage?: (message: any) => void) {
 					setGameState("workspace");
 				}
 
+				if (ms.type === "ServerMessageClientEliminated") {
+					setGameState("eliminated");
+				}
+
 				onMessage(ms);
 			};
 
@@ -50,7 +54,9 @@ function useWebSocket(onMessage?: (message: any) => void) {
 
 		ws.onclose = () => {
 			setConnected(false);
-			setGameState("login");
+			setGameState((prev) =>
+				prev === "eliminated" ? "eliminated" : "login"
+			);
 		};
 
 		setWebSocket(ws);
@@ -67,6 +73,7 @@ function useWebSocket(onMessage?: (message: any) => void) {
 
 	return {
 		gameState,
+		setGameState,
 		player,
 		connected,
 		webSocket,

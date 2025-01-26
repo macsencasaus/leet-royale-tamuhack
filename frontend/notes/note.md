@@ -22,4 +22,4 @@
 
 # Fix
 
--   Kahoot leaderboard
+-   Send message with everyone left

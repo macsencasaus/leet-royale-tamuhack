@@ -16,7 +16,8 @@ function SubmissionsTab() {
 	const onMessage = useCallback((message: Message) => {
 		switch (message.type) {
 			case "ServerMessageRoundStart":
-				
+				setResults([]);
+				setTle(false);
 				break;
 			case "ServerMessageTestResult":
 				setTle(message.tle);
