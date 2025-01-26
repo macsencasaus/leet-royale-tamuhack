@@ -192,6 +192,6 @@ func Test_q1(t *testing.T) {
 def add(a, b):
     return a + b
 `
-	res, err := RunTest([]byte(file), Python, 1)
+	res, err := RunTest([]byte(file), Python, 0)
 	t.Log(res, err)
 }
