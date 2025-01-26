@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	m "leet-guys/messages"
@@ -19,6 +20,8 @@ const Round2Time = 300 // 5 minutes
 const Round3Time = 300 // 5 minutes
 const Round4Time = 600 // 10 minutes
 
+const RoundBetweenTime = 5
+
 type room struct {
 	id       int
 	register chan *client
@@ -31,6 +34,9 @@ type room struct {
 
 	stateMu sync.Mutex
 	state   roomState
+
+	totalPlayers atomic.Int32
+	place        atomic.Int32
 
 	// states
 	waitingForPlayers
@@ -54,11 +60,11 @@ func newRoom(id int) *room {
 		clientsDone: make(map[clientId]bool),
 	}
 
-	r.waitingForPlayers = waitingForPlayers{r, make(chan bool)}
-	r.round1Running = round1Running{r, make(chan bool)}
-	r.round2Running = round2Running{r, make(chan bool)}
-	r.round3Running = round3Running{r, make(chan bool)}
-	r.round4Running = round4Running{r, make(chan bool)}
+	r.waitingForPlayers = waitingForPlayers{r, make(chan struct{})}
+	r.round1Running = round1Running{r, make(chan struct{})}
+	r.round2Running = round2Running{r, make(chan struct{})}
+	r.round3Running = round3Running{r, make(chan struct{})}
+	r.round4Running = round4Running{r, make(chan struct{})}
 	r.gameEnded = gameEnded{r}
 
 	return r
@@ -72,13 +78,6 @@ func (r *room) run() {
 
 	r.setState(r.waitingForPlayers)
 
-	go r.startCountDown(
-		RoomWait,
-		r.round1Running,
-		m.NewRoundStartMessage(1, Round1Time),
-		r.waitingForPlayers.countdownStop,
-	)
-
 	for {
 		select {
 		case client := <-r.register:
@@ -86,9 +85,7 @@ func (r *room) run() {
 				log.Fatalf("unable to register with state %T", r.state)
 			}
 			if r.registerClient(client) {
-				r.countdownStop <- true
-				// TODO: figure this out
-				// go r.startTimer(Round1Time, r.round2Running, r.round1Running.timerStop)
+				r.countdownDone <- struct{}{}
 			}
 		case msg := <-r.roomRead:
 			r.state.handleClientMessage(msg)
@@ -102,7 +99,7 @@ type roomState interface {
 
 type waitingForPlayers struct {
 	r             *room
-	countdownStop chan bool
+	countdownDone chan struct{}
 }
 
 func (s waitingForPlayers) handleClientMessage(msg m.ClientMessage) {
@@ -110,43 +107,116 @@ func (s waitingForPlayers) handleClientMessage(msg m.ClientMessage) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
 	case m.SkipLobbyMessage:
-		s.countdownStop <- true
+		s.countdownDone <- struct{}{}
 	}
 }
 
 type round1Running struct {
 	r         *room
-	timerStop chan bool
+	timerDone chan struct{}
 }
 
 func (s round1Running) handleClientMessage(msg m.ClientMessage) {
-	// TODO:
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type round2Running struct {
 	r         *room
-	timerStop chan bool
+	timerDone chan struct{}
 }
 
 func (s round2Running) handleClientMessage(msg m.ClientMessage) {
-
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type round3Running struct {
 	r         *room
-	timerStop chan bool
+	timerDone chan struct{}
+}
+
+func (s round3Running) handleClientMessage(msg m.ClientMessage) {
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type round4Running struct {
 	r         *room
-	timerStop chan bool
+	timerDone chan struct{}
+}
+
+func (s round4Running) handleClientMessage(msg m.ClientMessage) {
+	switch msg := msg.(type) {
+	case m.ClientQuitMessage:
+		s.r.unregisterClient(msg.PlayerId)
+	case m.SkipQuestionMessage:
+		s.timerDone <- struct{}{}
+	}
 }
 
 type gameEnded struct {
 	r *room
 }
 
+func (s gameEnded) handleClientMessage(msg m.ClientMessage) {
+
+}
+
 func (r *room) setState(s roomState) {
+	switch s.(type) {
+	case waitingForPlayers:
+		go r.startCountdown(
+			RoomWait,
+			r.round1Running,
+			m.NewRoundStartMessage(1, Round1Time),
+			r.waitingForPlayers.countdownDone,
+		)
+	case round1Running:
+		go r.startRoundTimer(
+			Round1Time,
+			r.round2Running,
+			m.NewRoundEndMessage(1),
+			m.NewRoundStartMessage(2, Round2Time),
+			r.round1Running.timerDone,
+		)
+	case round2Running:
+		go r.startRoundTimer(
+			Round2Time,
+			r.round3Running,
+			m.NewRoundEndMessage(2),
+			m.NewRoundStartMessage(3, Round3Time),
+			r.round2Running.timerDone,
+		)
+	case round3Running:
+		go r.startRoundTimer(
+			Round3Time,
+			r.round4Running,
+			m.NewRoundEndMessage(3),
+			m.NewRoundStartMessage(4, Round4Time),
+			r.round3Running.timerDone,
+		)
+	case round4Running:
+		go r.startRoundTimer(
+			Round4Time,
+			r.gameEnded,
+			m.NewRoundEndMessage(4),
+			nil,
+			r.round4Running.timerDone,
+		)
+	}
 	r.stateMu.Lock()
 	r.state = s
 	r.stateMu.Unlock()
@@ -166,6 +236,9 @@ func (r *room) registerClient(c *client) bool {
 	full := len(r.clients) == ClientsPerRoom
 	r.clientsMu.Unlock()
 
+	r.totalPlayers.Add(1)
+	r.place.Add(1)
+
 	return full
 }
 
@@ -175,8 +248,13 @@ func (r *room) unregisterClient(clientId clientId) {
 	delete(r.clients, clientId)
 	delete(r.clientsDone, clientId)
 	r.clientsMu.Unlock()
+
 	close(c.roomWrite)
+
+	r.place.Add(-1)
+
 	c.log("unregistered")
+
 	r.broadcast(m.NewClientLeftMessage(c.playerInfo()))
 }
 
@@ -194,48 +272,91 @@ func (r *room) sentMessageTo(clientId clientId, msg m.ServerMessage) {
 	r.clientsMu.RUnlock()
 }
 
-func (r *room) startTimer(sec int, successState roomState, stop chan bool) {
+func (r *room) startRoundTimer(
+	sec int,
+	nextState roomState,
+	endMessage m.ServerMessage,
+	nextMessage m.ServerMessage,
+	done chan struct{},
+) {
 	defer func() {
-		close(stop)
+		r.setState(nextState)
+		if nextMessage != nil {
+			r.broadcast(nextMessage)
+		}
+		close(done)
 	}()
 
 	ticker := time.NewTicker(time.Duration(sec) * time.Second)
+	defer ticker.Stop()
 
-	for {
-		select {
-		case success := <-stop:
-			if success {
-				r.setState(successState)
-			}
-			return
-		case <-ticker.C:
-			r.setState(successState)
-			return
-		}
+	select {
+	case <-done:
+		break
+	case <-ticker.C:
+		break
 	}
+
+	r.broadcast(endMessage)
+
+	go r.handleEliminations()
+	time.Sleep(RoundBetweenTime * time.Second)
 }
 
-func (r *room) startCountDown(sec int, successState roomState, successMessage m.ServerMessage, stop chan bool) {
+func (r *room) startCountdown(sec int, nextState roomState, broadcastMessage m.ServerMessage, done chan struct{}) {
 	defer func() {
-		close(stop)
+		r.setState(nextState)
+		r.broadcast(broadcastMessage)
+		close(done)
 	}()
 
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 
 	for i := sec; i >= 1; i-- {
 		select {
-		case success := <-stop:
-			if success {
-				r.setState(successState)
-				r.broadcast(successMessage)
-			}
+		case <-done:
 			return
 		case <-ticker.C:
 			r.broadcast(m.NewCountdownMessage(i))
 		}
 	}
-	r.setState(successState)
-	r.broadcast(successMessage)
+}
+
+func (r *room) handleEliminations() {
+	r.clientsMu.Lock()
+	for cId, finished := range r.clientsDone {
+		if !finished {
+			c := r.clients[cId]
+			r.clients[cId].roomWrite <- m.NewClientEliminatedMessage(
+				c.playerInfo(),
+				int(r.place.Load()),
+				int(r.totalPlayers.Load()),
+			)
+
+			delete(r.clients, cId)
+			delete(r.clientsDone, cId)
+			close(c.roomWrite)
+			r.place.Add(-1)
+			c.log("eliminated")
+			r.broadcast(m.NewClientLeftMessage(c.playerInfo()))
+		}
+	}
+	r.clientsMu.Unlock()
+}
+
+func (r *room) setClientDone(clientId int) {
+	r.clientsMu.Lock()
+	r.clientsDone[clientId] = true
+	r.clientsMu.Unlock()
+}
+
+func (r *room) resetDone() {
+	r.clientsMu.Lock()
+	for clientsId := range r.clientsDone {
+		r.clientsDone[clientsId] = false
+	}
+	r.clientsMu.Unlock()
 }
 
 func (r *room) playersInfo() []m.PlayerInfo {

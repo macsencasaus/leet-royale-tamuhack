@@ -22,5 +22,3 @@
 
 # Fix
 - Kahoot leaderboard
-
-- Skip question

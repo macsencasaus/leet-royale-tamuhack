@@ -15,7 +15,7 @@ function QuestionTab() {
 		}
 	}
 
-	return <p>{question}</p>;
+	return <p dangerouslySetInnerHTML={{ __html: question }}></p>;
 }
 
 export default QuestionTab;
