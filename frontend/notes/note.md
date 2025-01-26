@@ -21,4 +21,4 @@
 - Move to programming
 
 # Fix
-- Have the server wait for a "ready" signal from the client"
+- Start up but make workspace invisible 

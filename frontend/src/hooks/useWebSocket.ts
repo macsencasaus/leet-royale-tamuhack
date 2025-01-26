@@ -1,15 +1,20 @@
 import { useContext, useEffect } from "react";
 import { WebSocketContext } from "./context";
-import { MessageType } from "@/lib/types";
+import { Message, MessageType } from "@/lib/types";
 
 function useWebSocket(onMessage?: (message: any) => void) {
-	const { connected, setConnected, webSocket, setWebSocket } =
-		useContext(WebSocketContext);
+	const {
+		gameState,
+		setGameState,
+		connected,
+		setConnected,
+		webSocket,
+		setWebSocket,
+		setPlayer,
+	} = useContext(WebSocketContext);
 
 	useEffect(() => {
 		if (onMessage && webSocket && connected) {
-			console.trace("Listening for messages");
-
 			webSocket.addEventListener("message", _onMessage);
 			return () => {
 				webSocket.removeEventListener("message", _onMessage);
@@ -18,8 +23,18 @@ function useWebSocket(onMessage?: (message: any) => void) {
 	}, [onMessage, webSocket, connected]);
 
 	function _onMessage(ev: MessageEvent) {
-		const ms = ev.data;
-		onMessage!(JSON.parse(ms));
+		const ms: Message = JSON.parse(ev.data);
+		console.log(ms);
+
+		if (ms.type === "ServerMessageHubGreeting") {
+			setPlayer(ms.player);
+		}
+
+		if (gameState == "lobby" && ms.type === "ServerMessageRoundStart") {
+			setGameState("workspace");
+		}
+
+		onMessage!(ms);
 	}
 
 	function createWebSocket(address: string) {
@@ -27,10 +42,12 @@ function useWebSocket(onMessage?: (message: any) => void) {
 
 		ws.onopen = () => {
 			setConnected(true);
+			setGameState("lobby");
 		};
 
 		ws.onclose = () => {
 			setConnected(false);
+			setGameState("login");
 		};
 
 		setWebSocket(ws);
@@ -46,6 +63,7 @@ function useWebSocket(onMessage?: (message: any) => void) {
 	}
 
 	return {
+		gameState,
 		connected,
 		webSocket,
 		sendMessage,
