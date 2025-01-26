@@ -5,6 +5,8 @@ export type MessageType =
 	| "ClientMessageReady"
 	| "ClientMessageClientQuit"
 	| "ClientMessageSubmit"
+	| "ClientMessageSkipLobby"
+	| "ClientMessageSkipQuestion"
 	| "ServerMessageHubGreeting"
 	| "ServerMessageRoomGreeting"
 	| "ServerMessageCountdown"
@@ -33,9 +35,9 @@ export interface Message {
 	};
 	numTestCases: number;
 	visibleTestCases: { input: string; output: string }[];
-    question: string;
-    tle: boolean;
-    cases: {}[];
+	question: string;
+	tle: boolean;
+	cases: {}[];
 }
 
 export interface Player {
@@ -44,6 +46,5 @@ export interface Player {
 }
 
 export interface TestCases {
-    success: boolean;
-    
+	success: boolean;
 }
