@@ -64,6 +64,7 @@ func TestRunCpp_sadRun(t *testing.T) {
 		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
 	}
 }
+
 func TestRunCpp_sadRunTime(t *testing.T) {
 	file := `
     #include <iostream>
@@ -81,4 +82,37 @@ func TestRunCpp_sadRunTime(t *testing.T) {
 	if stage != RunTime {
 		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
 	}
+}
+
+func TestRunProblemTest_happy(t *testing.T) {
+	file := `
+    #include <iostream>
+    int main(int argc, char** argv) {
+        std::cout
+            << "OUTPUT 1"
+            << "\n" << argv[1] << "\n"
+            << "AC"
+            << "\n" << argv[1] << "\n"
+            << "output 2 the great line of text and some more"
+            << "\n" << argv[1] << "\n"
+            << "AC"
+            << "\n" << argv[1] << "\n"
+        ;
+    }
+    `
+	res , err := RunProblemTest([]byte(file), CPP)
+	if err != nil {
+		t.Errorf("Err was non-nil: %v\n", err)
+	}
+    if res.Issue != Success {
+		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", res.Issue)
+    }
+    if res.NCasesRun != 2 {
+        t.Errorf("Incorrect number of parsed cases (%d) expected %d\n", res.NCasesRun, 2)
+    }
+    for i := 0; i < res.NCasesRun; i++ {
+        if res.PFStatus[i] != AC {
+            t.Errorf("Parsed incorrect case status '%s' expected '%s'\n", res.PFStatus[i], AC)
+        }
+    }
 }

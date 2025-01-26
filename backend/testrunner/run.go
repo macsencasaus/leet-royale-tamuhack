@@ -12,6 +12,7 @@ import (
 
 type ErrorStage string
 type Language int
+type TestCaseStatus string
 
 const (
 	Compile     ErrorStage = "Compile"
@@ -27,11 +28,32 @@ const (
 	Javascript
 )
 
+const (
+	AC  TestCaseStatus = "Correct"
+	WA                 = "Wrong"
+	RE                 = "Runtime Error"
+	TLE                = "Time Limit Exceeded"
+)
+
 type Result struct {
 	Issue     ErrorStage
 	NCasesRun int
 	Stdout    [][]byte
-	PFStatus  []bool
+	PFStatus  []TestCaseStatus
+}
+
+func statusFromCode(letters []byte) TestCaseStatus {
+    if bytes.Compare(letters, []byte("AC")) == 0 {
+        return AC
+    } else if bytes.Compare(letters, []byte("WA")) == 0 {
+        return WA
+    } else if bytes.Compare(letters, []byte("RE")) == 0 {
+        return RE
+    } else if bytes.Compare(letters, []byte("TLE")) == 0 {
+        return TLE
+    }
+    log.Fatalf("Invalid test case status conversion from '%s'", letters)
+    return AC
 }
 
 func generateMagic() int64 {
@@ -48,7 +70,7 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 
 	compFile := fmt.Sprintf("/tmp/testrunner-%d", magic)
 
-	cmd := exec.CommandContext(ctx, "clang++", "--std=c++17", "-x", "c++", "-o", compFile, "-")
+	cmd := exec.CommandContext(ctx, "clang++", "--std=c++17", "-O3", "-fsanitize=address", "-Werror", "-x", "c++", "-o", compFile, "-")
 	cmd.Stdin = bytes.NewReader(fileContent)
 
 	out_ch := make(chan struct {
@@ -113,10 +135,9 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 	// this is unreachable
 }
 
-// Expects in the format `STDOUT` "\n" `MAGIC` "\n" `INFO`
+// Expects in the format `STDOUT` "\n" `MAGIC` "\n" `INFO` "\n" `MAGIC` "\n" ...
 func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
-	var magic int64
-	magic = 9876543210
+    magic := generateMagic()
 	magicString := fmt.Sprintf("\n%d\n", magic)
 
 	var streamOut []byte
@@ -137,17 +158,26 @@ func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
 
 	var testCasesRun int
 	var testCaseProgramOut [][]byte
-	var testCaseInfo [][]byte
-	var index int
-	for idx := bytes.Index(streamOut[index:], []byte(magicString)); idx < len(streamOut); {
-		testCasesRun++
-		testCaseProgramOut = append(testCaseProgramOut, streamOut[index:idx])
-		index = bytes.Index(streamOut[idx+1:], []byte(magicString))
-		testCaseInfo = append(testCaseInfo, streamOut[idx:index])
-	}
+	var testCaseStatus []TestCaseStatus
 
-	// parse
-	var testCaseStatus []bool
+    if stage == Compile || stage == CompileTime {
+        testCaseProgramOut = append(testCaseProgramOut, streamOut)
+        return Result{stage, 0, testCaseProgramOut, nil}, nil
+    }
+
+    var sections [][]byte = bytes.Split(streamOut, []byte(magicString))
+    for i := 0; i < len(sections); i += 2 {
+        if len(sections[i]) == 0 {
+            continue
+        }
+        testCasesRun++
+        testCaseProgramOut = append(testCaseProgramOut, sections[i])
+        testCaseStatus = append(testCaseStatus, statusFromCode(sections[i+1]))
+    }
+
+    for i := 0; i < 2; i++ {
+        log.Println(testCaseProgramOut[i], testCaseStatus[i])
+    }
 
 	return Result{stage, testCasesRun, testCaseProgramOut, testCaseStatus}, nil
 }
