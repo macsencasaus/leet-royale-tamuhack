@@ -186,7 +186,7 @@ func (s round4Running) handleClientMessage(msg m.ClientMessage) {
 		s.r.unregisterClient(msg.PlayerId)
 	case m.SubmitMessage:
 		if s.r.runTestRunner(msg, s.questionId) {
-            // TODO: declare a winner
+			// TODO: declare a winner
 			s.r.setClientDone(msg.PlayerId)
 		}
 	case m.SkipQuestionMessage:
@@ -210,13 +210,12 @@ func (r *room) runTestRunner(msg m.SubmitMessage, question int) bool {
 	case "javascript":
 		l = tr.Javascript
 	case "cpp":
-		l = tr.Javascript
+		l = tr.CPP
 	}
 	res, err := tr.RunTest([]byte(msg.Code), l, question)
 	if err != nil {
 		log.Fatal(err)
 	}
-    fmt.Println("test result:", res)
 
 	r.sendMessageTo(msg.PlayerId, m.NewTestResultMessage(&res))
 
@@ -291,6 +290,7 @@ func (r *room) registerClient(c *client) bool {
 
 	r.clientsMu.Lock()
 	r.clients[c.id] = c
+    r.clientsDone[c.id] = false
 	full := len(r.clients) == ClientsPerRoom
 	r.clientsMu.Unlock()
 
@@ -383,6 +383,7 @@ func (r *room) startCountdown(sec int, nextState roomState, broadcastMessage m.S
 }
 
 func (r *room) handleEliminations() {
+    r.log("clientsDone: %+v", r.clientsDone)
 	r.clientsMu.Lock()
 	for cId, finished := range r.clientsDone {
 		if !finished {

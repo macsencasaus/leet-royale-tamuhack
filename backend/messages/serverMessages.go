@@ -152,7 +152,7 @@ type TestResultMessage struct {
 func NewTestResultMessage(res *tr.Result) TestResultMessage {
 	var tle bool
 
-	tle = res.Issue == tr.CompileTime || res.Issue == tr.RunTime
+	tle = res.Issue == tr.RunTime
 
 	resCases := make([]ResultCase, 0, res.NCasesRun)
 
@@ -175,7 +175,7 @@ type UpdateClientStatus struct {
 	Type           ServerMessageType `json:"type"`
 	Player         PlayerInfo        `json:"player"`
 	Finished       bool              `json:"finished"`
-	CasesCompleted int               `json:"questionsCompleted"`
+	CasesCompleted int               `json:"casesCompleted"`
 	Timestamp      int               `json:"timestamp"`
 }
 

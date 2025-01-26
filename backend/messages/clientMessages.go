@@ -12,7 +12,7 @@ const (
 	ClientMessageTypeSubmit     = "ClientMessageSubmit"
 
 	ClientMessageTypeSkipLobby    = "ClientMessageSkipLobby"
-	ClientMessageTypeSkipQuestion = "ClientSkipQuestion"
+	ClientMessageTypeSkipQuestion = "ClientMessageSkipQuestion"
 )
 
 type ClientMessage interface {

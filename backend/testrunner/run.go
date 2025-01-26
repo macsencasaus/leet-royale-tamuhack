@@ -128,7 +128,8 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 
 	select {
 	case <-ctx.Done():
-		return (<-out_ch).out, RunTime, nil
+		out := <-out_ch
+		return out.out, RunTime, nil
 	case out := <-out_ch:
 		if out.err == nil {
 			return out.out, Success, nil
