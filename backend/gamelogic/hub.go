@@ -1,9 +1,9 @@
 package gamelogic
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	m "leet-guys/messages"
@@ -11,13 +11,48 @@ import (
 
 var cId int = 0
 
+const MaxRooms = 10
+
 type Hub struct {
-	register   chan *client
-	unregister chan *client
+	register chan *client
+
+	rooms [MaxRooms]*room
 }
 
 func NewHub() *Hub {
-	return nil
+	h := &Hub{
+		register: make(chan *client, ClientsPerRoom*10),
+	}
+
+	for i := 0; i < MaxRooms; i++ {
+		h.rooms[i] = newRoom(i)
+	}
+
+	return h
+}
+
+func (h *Hub) Run() {
+	defer func() {
+		close(h.register)
+	}()
+	log.Println("Hub Started")
+	for {
+		client := <-h.register
+		log.Println("Client Recieved in Hub")
+
+		for _, room := range h.rooms {
+			if !room.isRunning() {
+				go room.run()
+			} else if !room.isOpen() {
+				continue
+			}
+			client.log("registered to room %d", room.id)
+			room.register <- client
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 var upgrader = websocket.Upgrader{
@@ -32,25 +67,25 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("New WS Connection")
+
 	queryParams := r.URL.Query()
 
 	name := queryParams.Get("name")
-
-	fmt.Println("name:", name)
 
 	c := &client{
 		id:   cId,
 		name: name,
 		conn: conn,
+
+		roomWrite: make(chan m.ServerMessage),
 	}
 
 	var cmw m.ClientMessageWrapper
 
 	err = c.conn.ReadJSON(&cmw)
 	if err != nil {
-		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-			c.log("error: %v", err)
-		}
+		c.log("error: %v", err)
 		return
 	}
 
@@ -59,7 +94,15 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("Ready Message Recieved")
+
 	conn.WriteJSON(m.NewHubGreetingMessage(c.playerInfo()))
+
+	log.Println("Sent Hub Greeting")
+
+	go c.writePump()
+
+	h.register <- c
 
 	cId++
 }

@@ -21,4 +21,6 @@
 - Move to programming
 
 # Fix
-- Have the server wait for a "ready" signal from the client"
+- Kahoot leaderboard
+
+- Skip question

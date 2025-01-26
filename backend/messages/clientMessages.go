@@ -10,6 +10,9 @@ const (
 	ClientMessageTypeReady      = "ClientMessageReady"
 	ClientMessageTypeClientQuit = "ClientMessageClientQuit"
 	ClientMessageTypeSubmit     = "ClientMessageSubmit"
+
+	ClientMessageTypeSkipLobby    = "ClientMessageSkipLobby"
+	ClientMessageTypeSkipQuestion = "ClientSkipQuestion"
 )
 
 type ClientMessage interface {
@@ -22,7 +25,7 @@ type ClientMessageWrapper struct {
 }
 
 type ReadyMessage struct {
-    Type ClientMessageType `json:"type"`
+	Type ClientMessageType `json:"type"`
 }
 
 func (m ReadyMessage) clientMessage() {}
@@ -35,7 +38,16 @@ func (m ClientQuitMessage) clientMessage() {}
 
 type SubmitMessage struct {
 	PlayerId int    `json:"playerId"`
+	Langauge string `json:"language"`
 	Code     string `json:"code"`
 }
 
 func (m SubmitMessage) clientMessage() {}
+
+type SkipLobbyMessage struct{}
+
+func (m SkipLobbyMessage) clientMessage() {}
+
+type SkipQuestionMessage struct{}
+
+func (m SkipQuestionMessage) clientMessage() {}
