@@ -1,8 +1,8 @@
 import { Languages, Message, Templates } from "@/lib/types";
 import _Editor from "@monaco-editor/react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, SkipForward } from "lucide-react";
+import { Check, Loader, Send, SkipForward } from "lucide-react";
 import { Button } from "./ui/button";
 import useWebSocket from "@/hooks/useWebSocket";
 import { demo } from "@/config";
@@ -23,20 +23,32 @@ function EditorPanel() {
 		python: "",
 		cpp: "",
 	});
+	const [running, setRunning] = useState(false);
+	const [done, setDone] = useState(false);
 
-	const onMessage = useCallback((message: Message) => {
+	const { player, sendMessage } = useWebSocket(onMessage);
+
+	function onMessage(message: Message) {
 		switch (message.type) {
 			case "ServerMessageRoundStart":
 				setTemplates(message.templates);
 				setCode(message.templates);
+				setRunning(false);
+				setDone(false);
 				break;
 			case "ServerMessageRoundEnd":
 				setTemplates(undefined);
 				break;
+			case "ServerMessageTestResult":
+				setRunning(false);
+				break;
+			case "ServerMessageUpdateClientStatus":
+				if (message.player.id == player?.id) {
+					setDone(message.finished);
+				}
+				break;
 		}
-	}, []);
-
-	const { player, sendMessage } = useWebSocket(onMessage);
+	}
 
 	function onCode(_c: string | undefined) {
 		const next: any = {};
@@ -51,7 +63,7 @@ function EditorPanel() {
 	}
 
 	function submitCode() {
-		console.log(code);
+		setRunning(true);
 
 		sendMessage("ClientMessageSubmit", {
 			playerId: player?.id,
@@ -89,8 +101,10 @@ function EditorPanel() {
 						variant={"outline"}
 						style={{ backgroundColor: "rgba(25, 135, 84, .5)" }}
 						onClick={submitCode}
+						disabled={running || done}
 					>
-						<Send /> Submit
+						{running ? <Loader /> : done ? <Check /> : <Send />}{" "}
+						Submit
 					</Button>
 				</div>
 			</div>

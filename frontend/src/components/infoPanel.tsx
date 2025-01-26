@@ -1,5 +1,4 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { debug } from "@/config";
 import useWebSocket from "@/hooks/useWebSocket";
 import { Message } from "@/lib/types";
 import { useCallback, useState } from "react";
@@ -9,23 +8,33 @@ import StoreTab from "./storeTab";
 import { ScrollArea } from "./ui/scroll-area";
 import LeaderboardTab from "./leaderboardTab";
 
-type Tab = "prompt" | "submissions" | "leaderboard" | "store" | "debug";
+type Tab = "prompt" | "submissions" | "leaderboard" | "store";
 
 function InfoPanel() {
 	const [tab, setTab] = useState<Tab>("prompt");
-	const [messages, setMessages] = useState<string[]>([]);
 
 	const onMessage = useCallback((message: Message) => {
-		const next = messages.concat([JSON.stringify(message)]);
-		setMessages(next);
+		switch (message.type) {
+			case "ServerMessageTestResult":
+				for (const c of message.cases) {
+					if (!c.success) {
+						setTab("submissions");
+						return;
+					}
+				}
+
+				setTab("leaderboard");
+				break;
+		}
 	}, []);
 
 	useWebSocket(onMessage);
 
 	return (
 		<Tabs
-			defaultValue={debug ? "prompt" : "prompt"}
+			defaultValue={"prompt"}
 			className="flex flex-col h-full"
+			value={tab}
 			onValueChange={(value) => setTab(value as Tab)}
 		>
 			<div className="bg-border overflow-hidden -m-2 p-1 flex-none">
@@ -34,8 +43,6 @@ function InfoPanel() {
 					<TabsTrigger value="submissions">Submission</TabsTrigger>
 					<TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
 					<TabsTrigger value="store">Store</TabsTrigger>
-
-					{debug && <TabsTrigger value="debug">Debug</TabsTrigger>}
 				</TabsList>
 			</div>
 
@@ -77,18 +84,6 @@ function InfoPanel() {
 					>
 						<StoreTab />
 					</TabsContent>
-
-					{debug && (
-						<TabsContent
-							value="debug"
-							forceMount
-							style={{
-								display: tab !== "debug" ? "none" : undefined,
-							}}
-						>
-							{messages}
-						</TabsContent>
-					)}
 				</ScrollArea>
 			</div>
 		</Tabs>

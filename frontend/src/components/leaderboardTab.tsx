@@ -41,6 +41,7 @@ function LeaderboardTab() {
 		switch (message.type) {
 			case "ServerMessageRoundStart":
 				setTotalCases(message.numTestCases);
+				setPlayers({});
 				break;
 			case "ServerMessageUpdateClientStatus":
 				const next: any = {};

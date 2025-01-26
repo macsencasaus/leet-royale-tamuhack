@@ -1,4 +1,4 @@
-export type GameState = "login" | "lobby" | "workspace";
+export type GameState = "login" | "lobby" | "workspace" | "eliminated";
 
 export type Languages = "python" | "javascript" | "cpp";
 export type MessageType =
@@ -43,7 +43,7 @@ export interface Message {
 	casesCompleted: number;
 	place: number;
 	totalPlayers: number;
-    timestamp: number;
+	timestamp: number;
 }
 
 export interface Player {
@@ -66,10 +66,10 @@ export interface PlayerStatus {
 	player: Player;
 	finished: boolean;
 	casesCompleted: number;
-    timestamp: number;
+	timestamp: number;
 }
 
 export interface VisibleCases {
-    input: string;
-    output: string;
+	input: string;
+	output: string;
 }

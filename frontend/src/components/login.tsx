@@ -13,7 +13,7 @@ import { useState } from "react";
 import Rules from "./rules";
 
 function Login() {
-	const { createWebSocket } = useWebSocket();
+	const { gameState, createWebSocket } = useWebSocket();
 	const [name, setName] = useState("");
 
 	function connect(ev: any) {
@@ -26,11 +26,12 @@ function Login() {
 	return (
 		<div
 			className="flex justify-center h-dvh items-center gap-2 rounded"
+			style={{ display: gameState === "login" ? undefined : "none" }}
 		>
 			<form onSubmit={connect}>
 				<Card className="w-screen max-w-xs">
 					<CardHeader>
-						<CardTitle>Code Royale</CardTitle>
+						<CardTitle>Leet Royale</CardTitle>
 						<CardDescription>
 							LeetCode has never been more fun.
 						</CardDescription>
