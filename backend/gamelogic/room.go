@@ -15,7 +15,7 @@ type clientId = int
 
 const ClientsPerRoom = 40
 
-const RoomWait = 60    // 1 minutes
+const RoomWait = 60    // 1 minute
 const Round1Time = 300 // 5 minutes
 const Round2Time = 300 // 5 minutes
 const Round3Time = 300 // 5 minutes
@@ -61,10 +61,12 @@ func newRoom(id int) *room {
 		clientsDone: make(map[clientId]bool),
 	}
 
+    var x atomic.Int32
+
 	r.waitingForPlayers = waitingForPlayers{r, make(chan struct{})}
 	r.round1Running = round1Running{r, make(chan struct{}), 0, &tr.Questions[0]}
 	r.round2Running = round2Running{r, make(chan struct{}), 1, &tr.Questions[1]}
-	r.round3Running = round3Running{r, make(chan struct{}), 2, &tr.Questions[2]}
+	r.round3Running = round3Running{r, make(chan struct{}), 2, &tr.Questions[2], &x}
 	r.round4Running = round4Running{r, make(chan struct{}), 3, &tr.Questions[3]}
 	r.gameEnded = gameEnded{r}
 
@@ -153,10 +155,11 @@ func (s round2Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round3Running struct {
-	r          *room
-	timerDone  chan struct{}
-	questionId int
-	question   *tr.QuestionData
+	r                *room
+	timerDone        chan struct{}
+	questionId       int
+	question         *tr.QuestionData
+	clientsSubmitted *atomic.Int32
 }
 
 func (s round3Running) handleClientMessage(msg m.ClientMessage) {
@@ -166,7 +169,13 @@ func (s round3Running) handleClientMessage(msg m.ClientMessage) {
 	case m.SubmitMessage:
 		// TODO:
 		if s.r.runTestRunner(msg, s.questionId) {
-			s.r.setClientDone(msg.PlayerId)
+			if !s.r.isClientDone(msg.PlayerId) {
+				s.clientsSubmitted.Add(1)
+				s.r.setClientDone(msg.PlayerId)
+				if int(s.clientsSubmitted.Load()) == 10 {
+                    s.timerDone <- struct{}{}
+				}
+			}
 		}
 	case m.SkipQuestionMessage:
 		s.timerDone <- struct{}{}
@@ -186,8 +195,8 @@ func (s round4Running) handleClientMessage(msg m.ClientMessage) {
 		s.r.unregisterClient(msg.PlayerId)
 	case m.SubmitMessage:
 		if s.r.runTestRunner(msg, s.questionId) {
-			// TODO: declare a winner
 			s.r.setClientDone(msg.PlayerId)
+			s.timerDone <- struct{}{}
 		}
 	case m.SkipQuestionMessage:
 		s.timerDone <- struct{}{}
@@ -290,7 +299,7 @@ func (r *room) registerClient(c *client) bool {
 
 	r.clientsMu.Lock()
 	r.clients[c.id] = c
-    r.clientsDone[c.id] = false
+	r.clientsDone[c.id] = false
 	full := len(r.clients) == ClientsPerRoom
 	r.clientsMu.Unlock()
 
@@ -385,7 +394,6 @@ func (r *room) startCountdown(sec int, nextState roomState, broadcastMessage m.S
 }
 
 func (r *room) handleEliminations() {
-    r.log("clientsDone: %+v", r.clientsDone)
 	r.clientsMu.Lock()
 	for cId, finished := range r.clientsDone {
 		if !finished {
@@ -411,6 +419,13 @@ func (r *room) setClientDone(clientId int) {
 	r.clientsMu.Lock()
 	r.clientsDone[clientId] = true
 	r.clientsMu.Unlock()
+}
+
+func (r *room) isClientDone(clientId int) bool {
+	r.clientsMu.RLock()
+	done := r.clientsDone[clientId]
+	r.clientsMu.RUnlock()
+	return done
 }
 
 func (r *room) resetDone() {
