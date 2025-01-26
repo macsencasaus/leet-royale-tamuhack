@@ -41,12 +41,8 @@ function EditorPanel() {
 	function onCode(_c: string | undefined) {
 		const next: any = {};
 		next[language] = _c;
-		setCode((prev) => {
-			console.log({
-				...prev,
-				...next,
-			});
 
+		setCode((prev) => {
 			return {
 				...prev,
 				...next,

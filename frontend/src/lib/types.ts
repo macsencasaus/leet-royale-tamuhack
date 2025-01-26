@@ -36,13 +36,14 @@ export interface Message {
 		cpp: string;
 	};
 	numTestCases: number;
-	visibleTestCases: { input: string; output: string }[];
+	visibleTestCases: VisibleCases[];
 	tle: boolean;
 	cases: TestCase[];
 	finished: boolean;
 	casesCompleted: number;
 	place: number;
 	totalPlayers: number;
+    timestamp: number;
 }
 
 export interface Player {
@@ -65,4 +66,10 @@ export interface PlayerStatus {
 	player: Player;
 	finished: boolean;
 	casesCompleted: number;
+    timestamp: number;
+}
+
+export interface VisibleCases {
+    input: string;
+    output: string;
 }

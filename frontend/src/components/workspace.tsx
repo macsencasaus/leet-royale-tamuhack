@@ -7,9 +7,25 @@ import EditorPanel from "./editorPanel";
 import InfoPanel from "./infoPanel";
 import HeaderPanel from "./headerPanel";
 import useWebSocket from "@/hooks/useWebSocket";
+import { useCallback, useState } from "react";
+import { Message } from "@/lib/types";
+import Breather from "./breather";
 
 function Workspace({ force }: { force?: boolean }) {
-	const { gameState } = useWebSocket();
+	const [waiting, setWaiting] = useState(true);
+
+	const onMessage = useCallback((message: Message) => {
+		switch (message.type) {
+			case "ServerMessageRoundStart":
+				setWaiting(false);
+				break;
+			case "ServerMessageRoundEnd":
+				setWaiting(true);
+				break;
+		}
+	}, []);
+
+	const { gameState } = useWebSocket(onMessage);
 
 	return (
 		<div
@@ -18,9 +34,13 @@ function Workspace({ force }: { force?: boolean }) {
 			}`}
 		>
 			<HeaderPanel />
+			<div className="grow" style={{ display: waiting ? "" : "none" }}>
+				<Breather />
+			</div>
 			<ResizablePanelGroup
 				direction="horizontal"
 				className="grow"
+				style={{ display: waiting ? "none" : "" }}
 			>
 				<ResizablePanel className="border border-white/10 rounded mr-1 p-2 h-full w-full">
 					<InfoPanel />
