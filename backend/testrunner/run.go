@@ -10,15 +10,15 @@ import (
 	"time"
 )
 
-type ErrorStage int
+type ErrorStage string
 type Language int
 
 const (
-	Compile ErrorStage = iota
-	CompileTime
-	Run
-	RunTime
-	Success
+	Compile     ErrorStage = "Compile"
+	CompileTime            = "CompileTime"
+	Run                    = "Run"
+	RunTime                = "RunTime"
+	Success                = "Success"
 )
 
 const (
@@ -97,7 +97,15 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 		return (<-out_ch).out, RunTime, nil
 	case out := <-out_ch:
 		if out.err != nil {
-			return out.out, Run, nil
+			if v, ok := out.err.(*exec.ExitError); ok {
+				if v.ExitCode() != 0 {
+					return out.out, Run, nil
+				} else {
+					return out.out, Success, nil
+				}
+			} else {
+				return out.out, Run, out.err
+			}
 		}
 		return out.out, Success, nil
 	}
@@ -118,7 +126,7 @@ func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
 	switch lang {
 	case CPP:
 		streamOut, stage, err = runCpp(fileContent, magic)
-    // TODO
+		// TODO
 	default:
 		log.Fatal("Language not implemented")
 	}

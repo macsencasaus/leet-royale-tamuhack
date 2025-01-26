@@ -13,7 +13,7 @@ func TestRunCpp_happy(t *testing.T) {
     }
     `
 	magic := generateMagic()
-    magicString := magicToString(magic)
+	magicString := magicToString(magic)
 	out, stage, err := runCpp([]byte(file), magic)
 	if err != nil {
 		t.Errorf("Err was non-nil: %v\n", err)
@@ -40,8 +40,45 @@ func TestRunCpp_sadCompile(t *testing.T) {
 	if stage != Compile {
 		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
 	}
-    search := []byte("use of undeclared identifier")
+	search := []byte("use of undeclared identifier")
 	if bytes.Index(out, search) == -1 {
 		t.Errorf("Output did not have error:\n%s\n>>Should have contained '%s'\n", out, search)
+	}
+}
+
+func TestRunCpp_sadRun(t *testing.T) {
+	file := `
+    #include <iostream>
+    int main(int argc, char** argv) {
+        int* a = 0x0;
+        std::cout << *a;
+        return 0;
+    }
+    `
+	magic := generateMagic()
+	_, stage, err := runCpp([]byte(file), magic)
+	if err != nil {
+		t.Errorf("Err was non-nil: %v\n", err)
+	}
+	if stage != Run {
+		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
+	}
+}
+func TestRunCpp_sadRunTime(t *testing.T) {
+	file := `
+    #include <iostream>
+    int main(int argc, char** argv) {
+        for (int i = 0; i > -1; i++) {
+            std::cout << "";
+        }
+    }
+    `
+	magic := generateMagic()
+	_, stage, err := runCpp([]byte(file), magic)
+	if err != nil {
+		t.Errorf("Err was non-nil: %v\n", err)
+	}
+	if stage != RunTime {
+		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
 	}
 }
