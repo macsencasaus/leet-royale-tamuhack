@@ -1,5 +1,6 @@
 import { useContext, useEffect } from "react";
 import { WebSocketContext } from "./context";
+import { MessageType } from "@/lib/types";
 
 function useWebSocket(onMessage?: (message: any) => void) {
 	const { connected, setConnected, webSocket, setWebSocket } =
@@ -9,12 +10,17 @@ function useWebSocket(onMessage?: (message: any) => void) {
 		if (onMessage && webSocket && connected) {
 			console.trace("Listening for messages");
 
-			webSocket.addEventListener("message", onMessage);
+			webSocket.addEventListener("message", _onMessage);
 			return () => {
-				webSocket.removeEventListener("message", onMessage);
+				webSocket.removeEventListener("message", _onMessage);
 			};
 		}
 	}, [onMessage, webSocket, connected]);
+
+	function _onMessage(ev: MessageEvent) {
+		const ms = ev.data;
+		onMessage!(JSON.parse(ms));
+	}
 
 	function createWebSocket(address: string) {
 		const ws = new WebSocket(address);
@@ -30,9 +36,19 @@ function useWebSocket(onMessage?: (message: any) => void) {
 		setWebSocket(ws);
 	}
 
+	function sendMessage(type: MessageType, data?: Record<string, any>) {
+		const message = {
+			type,
+			data,
+		};
+
+		webSocket?.send(JSON.stringify(message));
+	}
+
 	return {
 		connected,
 		webSocket,
+		sendMessage,
 		createWebSocket,
 	};
 }
