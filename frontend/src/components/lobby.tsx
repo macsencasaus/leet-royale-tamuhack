@@ -58,10 +58,23 @@ function Lobby({ force }: { force?: boolean }) {
 					<CardTitle>Lobby {lobbyId != -1 ? lobbyId : ""}</CardTitle>
 					{player && (
 						<CardDescription>
-							{others.length > 0
-								? `Settle in, ${player.name}. This is your fierce
-							competition:`
-								: `Welcome, ${player.name}.`}
+							{others.length > 0 ? (
+								<p>
+									Settle in,{" "}
+									<span className="font-bold">
+										{player.name}
+									</span>
+									. This is your fierce competition:
+								</p>
+							) : (
+								<p>
+									Welcome,{" "}
+									<span className="font-bold">
+										{player.name}
+									</span>
+									.
+								</p>
+							)}
 						</CardDescription>
 					)}
 				</CardHeader>
