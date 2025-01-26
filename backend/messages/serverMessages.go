@@ -129,6 +129,8 @@ func (m RoundStartMessage) serverMessage() {}
 type RoundEndMessage struct {
 	Type  ServerMessageType `json:"type"`
 	Round int               `json:"round"`
+    CurrentPlayers []PlayerInfo `json:"currentPlayers"`
+    EliminatedPlayers []PlayerInfo `json:"eliminatedPlayers"`
 }
 
 func NewRoundEndMessage(round int) RoundEndMessage {

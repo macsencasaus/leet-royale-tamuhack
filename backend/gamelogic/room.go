@@ -32,6 +32,7 @@ type room struct {
 	clientsMu   sync.RWMutex
 	clients     map[clientId]*client
 	clientsDone map[clientId]bool
+    clientsLeft []m.PlayerInfo
 
 	stateMu sync.Mutex
 	state   roomState
@@ -318,6 +319,7 @@ func (r *room) unregisterClient(clientId clientId) {
 		if !ok {
 			return
 		}
+        r.clientsLeft = append(r.clientsLeft, c.playerInfo())
 		delete(r.clients, clientId)
 		delete(r.clientsDone, clientId)
 		r.clientsMu.Unlock()
@@ -349,7 +351,7 @@ func (r *room) sendMessageTo(clientId clientId, msg m.ServerMessage) {
 func (r *room) startRoundTimer(
 	sec int,
 	nextState roomState,
-	endMessage m.ServerMessage,
+	endMessage m.RoundEndMessage,
 	nextMessage m.ServerMessage,
 	done chan struct{},
 ) {
@@ -371,9 +373,14 @@ func (r *room) startRoundTimer(
 		break
 	}
 
-	r.broadcast(endMessage)
+    eliminatedPlayers, keptPlayers := r.handleEliminations()
+    endMessage.EliminatedPlayers = eliminatedPlayers
+	r.clientsMu.Lock()
+    endMessage.EliminatedPlayers = append(endMessage.EliminatedPlayers, r.clientsLeft...)
+	r.clientsMu.Unlock()
+    endMessage.CurrentPlayers = keptPlayers
 
-	r.handleEliminations()
+	r.broadcast(endMessage)
 
 	r.resetDone()
 
@@ -400,13 +407,17 @@ func (r *room) startCountdown(sec int, nextState roomState, broadcastMessage m.S
 	}
 }
 
-func (r *room) handleEliminations() {
+func (r *room) handleEliminations() ([]m.PlayerInfo, []m.PlayerInfo) {
+    var eliminatedClients []m.PlayerInfo
+    var keptClients []m.PlayerInfo
+    r.log("clientsDone: %+v", r.clientsDone)
 	r.clientsMu.Lock()
 	defer r.clientsMu.Unlock()
 	toDelete := []int{}
 	for cId, finished := range r.clientsDone {
+        c := r.clients[cId]
 		if !finished {
-			c := r.clients[cId]
+            eliminatedClients = append(eliminatedClients, c.playerInfo())
 			r.clients[cId].roomWrite <- m.NewClientEliminatedMessage(
 				c.playerInfo(),
 				int(r.place.Load()),
@@ -421,11 +432,14 @@ func (r *room) handleEliminations() {
 			for _, ch := range r.clients {
 				ch.roomWrite <- m.NewClientLeftMessage(c.playerInfo())
 			}
-		}
+		} else {
+            keptClients = append(keptClients, c.playerInfo())
+        }
 	}
 	for _, cId := range toDelete {
 		delete(r.clientsDone, cId)
 	}
+    return eliminatedClients, keptClients
 }
 
 func (r *room) setClientDone(clientId int) {
@@ -446,6 +460,7 @@ func (r *room) resetDone() {
 	for clientsId := range r.clientsDone {
 		r.clientsDone[clientsId] = false
 	}
+    r.clientsLeft = nil
 	r.clientsMu.Unlock()
 }
 
