@@ -28,29 +28,34 @@ function Workspace({ force }: { force?: boolean }) {
 	const { gameState } = useWebSocket(onMessage);
 
 	return (
-		<div
-			className={`flex flex-col gap-1 h-full ${
-				gameState !== "workspace" && !force ? "hidden" : ""
-			}`}
-		>
-			<HeaderPanel />
-			<div className="grow" style={{ display: waiting ? "" : "none" }}>
-				<Breather />
-			</div>
-			<ResizablePanelGroup
-				direction="horizontal"
-				className="grow"
-				style={{ display: waiting ? "none" : "" }}
+		<>
+			<div
+				className={`flex flex-col gap-1 h-full ${
+					gameState !== "workspace" && !force ? "hidden" : ""
+				}`}
 			>
-				<ResizablePanel className="border border-white/10 rounded mr-1 p-2 h-full w-full">
-					<InfoPanel />
-				</ResizablePanel>
-				<ResizableHandle className="bg-transparent" />
-				<ResizablePanel className="border border-white/10 rounded p-2 h-full">
-					<EditorPanel />
-				</ResizablePanel>
-			</ResizablePanelGroup>
-		</div>
+				<HeaderPanel />
+				<div
+					className="grow"
+					style={{ display: waiting ? "" : "none" }}
+				>
+					<Breather />
+				</div>
+				<ResizablePanelGroup
+					direction="horizontal"
+					className="grow"
+					style={{ display: waiting ? "none" : "" }}
+				>
+					<ResizablePanel className="border border-white/10 rounded mr-1 p-2 h-full w-full">
+						<InfoPanel />
+					</ResizablePanel>
+					<ResizableHandle className="bg-transparent" />
+					<ResizablePanel className="border border-white/10 rounded p-2 h-full">
+						<EditorPanel />
+					</ResizablePanel>
+				</ResizablePanelGroup>
+			</div>
+		</>
 	);
 }
 

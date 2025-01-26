@@ -4,7 +4,7 @@ import { Message } from "@/lib/types";
 import { useCallback, useState } from "react";
 import PromptTab from "./promptTab";
 import SubmissionsTab from "./submissionsTab";
-import StoreTab from "./storeTab";
+// import StoreTab from "./storeTab";
 import { ScrollArea } from "./ui/scroll-area";
 import LeaderboardTab from "./leaderboardTab";
 
@@ -42,7 +42,7 @@ function InfoPanel() {
 					<TabsTrigger value="prompt">Prompt</TabsTrigger>
 					<TabsTrigger value="submissions">Submission</TabsTrigger>
 					<TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-					<TabsTrigger value="store">Store</TabsTrigger>
+					{/* <TabsTrigger value="store">Store</TabsTrigger> */}
 				</TabsList>
 			</div>
 
@@ -75,7 +75,7 @@ function InfoPanel() {
 					>
 						<LeaderboardTab />
 					</TabsContent>
-					<TabsContent
+					{/* <TabsContent
 						value="store"
 						forceMount
 						style={{
@@ -83,7 +83,7 @@ function InfoPanel() {
 						}}
 					>
 						<StoreTab />
-					</TabsContent>
+					</TabsContent> */}
 				</ScrollArea>
 			</div>
 		</Tabs>

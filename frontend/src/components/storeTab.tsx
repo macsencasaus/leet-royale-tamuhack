@@ -2,7 +2,7 @@ import useWebSocket from "@/hooks/useWebSocket";
 import { Items, Message } from "@/lib/types";
 import { useCallback } from "react";
 import { Button } from "./ui/button";
-import { Disc3, ShieldAlert, Snowflake } from "lucide-react";
+import { Disc3, Lightbulb, ShieldAlert, Snowflake } from "lucide-react";
 
 function StoreTab() {
 	const onMessage = useCallback((message: Message) => {
@@ -30,20 +30,20 @@ function StoreTab() {
 		"ad-space": {
 			name: "Ad Space",
 			icon: <ShieldAlert />,
-			price: 10,
+			price: 0,
 			desc: "Play annoying ads on the enemy's screen.",
 		},
 		"dvd-logo": {
 			name: "DvD Logo",
 			icon: <Disc3 />,
-			price: 10,
+			price: 0,
 			desc: "Deploy a DvD logo to distract your opponent while they code.",
 		},
 		"light-mode": {
-			name: "",
+			name: "Light Mode",
 			price: 0,
-			desc: "",
-			icon: undefined,
+			desc: "Make the opponent's code editor enter light mode.",
+			icon: <Lightbulb/>,
 		},
 		freeze: {
 			name: "",
@@ -83,6 +83,7 @@ function StoreTab() {
 						{data.icon}
 						{data.name}
 					</Button>
+					<p>{data.desc}</p>
 				</div>
 			))}
 		</div>
