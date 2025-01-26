@@ -65,7 +65,7 @@ func magicToString(magic int64) string {
 }
 
 func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	compFile := fmt.Sprintf("/tmp/testrunner-%d", magic)
@@ -135,6 +135,90 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 	// this is unreachable
 }
 
+func runPython(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	magicString := magicToString(magic)
+
+	out_ch := make(chan struct {
+		out []byte
+		err error
+	})
+
+	go func() {
+		cmd := exec.CommandContext(ctx, "python3", "-", magicString)
+		cmd.Stdin = bytes.NewReader(fileContent)
+		runOut, err := cmd.CombinedOutput()
+		out_ch <- struct {
+			out []byte
+			err error
+		}{runOut, err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return (<-out_ch).out, RunTime, nil
+	case out := <-out_ch:
+		if out.err != nil {
+			if v, ok := out.err.(*exec.ExitError); ok {
+				if v.ExitCode() != 0 {
+					return out.out, Run, nil
+				} else {
+					return out.out, Success, nil
+				}
+			} else {
+				return out.out, Run, out.err
+			}
+		}
+		return out.out, Success, nil
+	}
+
+	// unreachable
+}
+
+func runJavascript(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	magicString := magicToString(magic)
+
+	out_ch := make(chan struct {
+		out []byte
+		err error
+	})
+
+	go func() {
+		cmd := exec.CommandContext(ctx, "node", "-", "--", magicString)
+		cmd.Stdin = bytes.NewReader(fileContent)
+		runOut, err := cmd.CombinedOutput()
+		out_ch <- struct {
+			out []byte
+			err error
+		}{runOut, err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return (<-out_ch).out, RunTime, nil
+	case out := <-out_ch:
+		if out.err != nil {
+			if v, ok := out.err.(*exec.ExitError); ok {
+				if v.ExitCode() != 0 {
+					return out.out, Run, nil
+				} else {
+					return out.out, Success, nil
+				}
+			} else {
+				return out.out, Run, out.err
+			}
+		}
+		return out.out, Success, nil
+	}
+
+	// unreachable
+}
+
 // Expects in the format `STDOUT` "\n" `MAGIC` "\n" `INFO` "\n" `MAGIC` "\n" ...
 func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
 	magic := generateMagic()
@@ -147,7 +231,10 @@ func RunProblemTest(fileContent []byte, lang Language) (Result, error) {
 	switch lang {
 	case CPP:
 		streamOut, stage, err = runCpp(fileContent, magic)
-		// TODO
+	case Javascript:
+		streamOut, stage, err = runJavascript(fileContent, magic)
+	case Python:
+		streamOut, stage, err = runPython(fileContent, magic)
 	default:
 		log.Fatal("Language not implemented")
 	}

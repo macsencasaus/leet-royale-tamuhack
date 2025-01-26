@@ -10,6 +10,7 @@ func TestRunCpp_happy(t *testing.T) {
     #include <iostream>
     int main(int argc, char** argv) {
         std::cout << argv[1];
+        return 0;
     }
     `
 	magic := generateMagic()
@@ -72,6 +73,7 @@ func TestRunCpp_sadRunTime(t *testing.T) {
         for (int i = 0; i > -1; i++) {
             std::cout << "";
         }
+        return 0;
     }
     `
 	magic := generateMagic()
@@ -80,6 +82,72 @@ func TestRunCpp_sadRunTime(t *testing.T) {
 		t.Errorf("Err was non-nil: %v\n", err)
 	}
 	if stage != RunTime {
+		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
+	}
+}
+
+func TestRunPython_happy(t *testing.T) {
+	file := `
+import sys
+print(sys.argv[1], end="")
+    `
+	magic := generateMagic()
+	magicString := magicToString(magic)
+	out, stage, err := runPython([]byte(file), magic)
+	if err != nil {
+		t.Errorf("Err was non-nil: %v\n", err)
+	}
+	if stage != Success {
+		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
+	}
+	if bytes.Compare(out, []byte(magicString)) != 0 {
+		t.Errorf("Magic bytes and output were not the same:\n (Expected)       vs. (Actual)        \n'%16s' '%16s'\n", magicString, out)
+	}
+}
+
+func TestRunPython_sadRun(t *testing.T) {
+	file := `
+import sys
+print(sys.argv[3], end="")
+    `
+	magic := generateMagic()
+	_, stage, err := runPython([]byte(file), magic)
+	if err != nil {
+		t.Errorf("Err was non-nil: %v\n", err)
+	}
+	if stage != Run {
+		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
+	}
+}
+
+func TestRunJavascript_happy(t *testing.T) {
+	file := `
+process.stdout.write(process.argv[3])
+    `
+	magic := generateMagic()
+	magicString := magicToString(magic)
+	out, stage, err := runJavascript([]byte(file), magic)
+	if err != nil {
+		t.Errorf("Err was non-nil: %v\n", err)
+	}
+	if stage != Success {
+		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
+	}
+	if bytes.Compare(out, []byte(magicString)) != 0 {
+		t.Errorf("Magic bytes and output were not the same:\n (Expected)       vs. (Actual)        \n'%16s' '%16s'\n", magicString, out)
+	}
+}
+
+func TestRunJavascript_sadRun(t *testing.T) {
+	file := `
+process.stdout.write(process.argv[5][0])
+    `
+	magic := generateMagic()
+	_, stage, err := runJavascript([]byte(file), magic)
+	if err != nil {
+		t.Errorf("Err was non-nil: %v\n", err)
+	}
+	if stage != Run {
 		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
 	}
 }
