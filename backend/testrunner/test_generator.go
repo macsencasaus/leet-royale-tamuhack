@@ -117,7 +117,7 @@ func generate(userInput string, language Language, magicNumber string, questionN
 }
 
 func isNotAList(typee string) bool {
-	return ! (len(typee) > 5 && typee[4] == ' ')
+	return !(len(typee) > 5 && typee[4] == ' ')
 }
 
 func generatePython(userInput, magicNumber string, r reflectionData) string {

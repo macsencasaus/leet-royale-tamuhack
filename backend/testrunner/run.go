@@ -65,13 +65,20 @@ func magicToString(magic int64) string {
 }
 
 func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
+	magicString := magicToString(magic)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	compFile := fmt.Sprintf("/tmp/testrunner-%d", magic)
+	cmdComp := exec.CommandContext(ctx, "clang++", "--std=c++17", "-x", "c++", "-c", "-emit-llvm", "-o", "-", "-")
+	cmdRun := exec.CommandContext(ctx, "lli", "-", magicString)
+	cmdComp.Stdin = bytes.NewReader(fileContent)
 
-	cmd := exec.CommandContext(ctx, "clang++", "--std=c++17", "-O3", "-fsanitize=address", "-Werror", "-x", "c++", "-o", compFile, "-")
-	cmd.Stdin = bytes.NewReader(fileContent)
+	var err error
+	cmdRun.Stdin, err = cmdComp.StdoutPipe()
+	if err != nil {
+		log.Fatal("Failed to connect compile/run components")
+	}
 
 	out_ch := make(chan struct {
 		out []byte
@@ -79,60 +86,36 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 	})
 
 	go func() {
-		comOut, err := cmd.CombinedOutput()
+		var runBuf bytes.Buffer
+		var comBuf bytes.Buffer
+		var lliBuf bytes.Buffer
+		cmdRun.Stdout = &runBuf
+		cmdRun.Stderr = &lliBuf
+		cmdComp.Stderr = &comBuf
+
+		cmdComp.Start()
+		cmdRun.Start()
+
+		cmdComp.Wait()
+		cmdRun.Wait()
+
+		var bts []byte
+		bts = append(bts, runBuf.Bytes()...)
+		bts = append(bts, comBuf.Bytes()...)
+		bts = append(bts, lliBuf.Bytes()...)
+
 		out_ch <- struct {
 			out []byte
 			err error
-		}{comOut, err}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return (<-out_ch).out, CompileTime, nil
-	case out := <-out_ch:
-		if out.err != nil {
-			if _, ok := out.err.(*exec.ExitError); ok {
-				return out.out, Compile, nil
-			} else {
-				return out.out, Compile, out.err
-			}
-		}
-		// out.err is nil, progress normally
-	}
-
-	magicString := magicToString(magic)
-
-	ctx, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel2()
-
-	go func() {
-		cmd = exec.CommandContext(ctx, compFile, magicString)
-		runOut, err := cmd.CombinedOutput()
-		out_ch <- struct {
-			out []byte
-			err error
-		}{runOut, err}
+		}{bts, nil}
 	}()
 
 	select {
 	case <-ctx.Done():
 		return (<-out_ch).out, RunTime, nil
 	case out := <-out_ch:
-		if out.err != nil {
-			if v, ok := out.err.(*exec.ExitError); ok {
-				if v.ExitCode() != 0 {
-					return out.out, Run, nil
-				} else {
-					return out.out, Success, nil
-				}
-			} else {
-				return out.out, Run, out.err
-			}
-		}
 		return out.out, Success, nil
 	}
-
-	// this is unreachable
 }
 
 func runPython(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
@@ -252,7 +235,7 @@ func RunProblemTest(fileContent []byte, lang Language, magic int64) (Result, err
 	}
 
 	var sections [][]byte = bytes.Split(streamOut, []byte(magicString))
-	for i := 0; i < (len(sections) / 2) * 2; i += 2 {
+	for i := 0; i < (len(sections)/2)*2; i += 2 {
 		testCasesRun++
 		testCaseProgramOut = append(testCaseProgramOut, sections[i])
 		testCaseStatus = append(testCaseStatus, statusFromCode(sections[i+1]))
