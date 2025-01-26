@@ -15,11 +15,9 @@ type Language int
 type TestCaseStatus string
 
 const (
-	Compile     ErrorStage = "Compile"
-	CompileTime            = "CompileTime"
-	Run                    = "Run"
-	RunTime                = "RunTime"
-	Success                = "Success"
+	Run     ErrorStage = "Run"
+	RunTime            = "RunTime"
+	Success            = "Success"
 )
 
 const (
@@ -93,11 +91,19 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 		cmdRun.Stderr = &lliBuf
 		cmdComp.Stderr = &comBuf
 
-		cmdComp.Start()
-		cmdRun.Start()
+		var err error
 
-		cmdComp.Wait()
-		cmdRun.Wait()
+		err = cmdComp.Start()
+		if e := cmdRun.Start(); e != nil {
+			err = e
+		}
+
+		if e := cmdComp.Wait(); e != nil {
+			err = e
+		}
+		if e := cmdRun.Wait(); e != nil {
+			err = e
+		}
 
 		var bts []byte
 		bts = append(bts, runBuf.Bytes()...)
@@ -107,14 +113,24 @@ func runCpp(fileContent []byte, magic int64) ([]byte, ErrorStage, error) {
 		out_ch <- struct {
 			out []byte
 			err error
-		}{bts, nil}
+		}{bts, err}
 	}()
 
 	select {
 	case <-ctx.Done():
 		return (<-out_ch).out, RunTime, nil
 	case out := <-out_ch:
-		return out.out, Success, nil
+		if out.err == nil {
+			return out.out, Success, nil
+		}
+		if v, ok := out.err.(*exec.ExitError); ok {
+			if v.ExitCode() == 0 {
+				return out.out, Success, nil
+			} else {
+				return out.out, Run, nil
+			}
+		}
+		return out.out, Run, err
 	}
 }
 
@@ -228,11 +244,6 @@ func RunProblemTest(fileContent []byte, lang Language, magic int64) (Result, err
 	var testCasesRun int
 	var testCaseProgramOut [][]byte
 	var testCaseStatus []TestCaseStatus
-
-	if stage == Compile || stage == CompileTime {
-		testCaseProgramOut = append(testCaseProgramOut, streamOut)
-		return Result{stage, 0, testCaseProgramOut, nil}, nil
-	}
 
 	var sections [][]byte = bytes.Split(streamOut, []byte(magicString))
 	for i := 0; i < (len(sections)/2)*2; i += 2 {

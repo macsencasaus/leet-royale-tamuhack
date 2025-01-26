@@ -31,6 +31,7 @@ func TestRunCpp_sadCompile(t *testing.T) {
 	file := `
     int main(int argc, char** argv) {
         std::cout << argv[1];
+        return 0;
     }
     `
 	magic := generateMagic()
@@ -38,7 +39,7 @@ func TestRunCpp_sadCompile(t *testing.T) {
 	if err != nil {
 		t.Errorf("Err was non-nil: %v\n", err)
 	}
-	if stage != Compile {
+	if stage != Run {
 		t.Errorf("Program failed somewhere unexpected (stage): %#v\n", stage)
 	}
 	search := []byte("use of undeclared identifier")
