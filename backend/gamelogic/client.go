@@ -2,32 +2,47 @@ package gamelogic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net"
+	"sync"
 
 	m "leet-guys/messages"
 
 	"github.com/gorilla/websocket"
 )
 
-type client struct {
+type Client struct {
 	id   int
 	name string
 
-	conn *websocket.Conn
-	hub  *Hub
+	conn       *websocket.Conn
+	connClosed bool
 
-	roomWrite chan m.ServerMessage
+	hub *Hub
+
+	roomWrite chan PendingMessage
 	roomRead  chan m.ClientMessage
+
+	// room things
+	done   bool
+	closed bool
+
+	closedMu sync.Mutex
 }
 
-func (c *client) readPump() {
+type PendingMessage struct {
+	msg  m.ServerMessage
+	done chan struct{}
+}
+
+func (c *Client) readPump() {
 	defer func() {
 		if c.roomRead != nil {
 			c.roomRead <- m.ClientQuitMessage{PlayerId: c.id}
 		}
-		c.conn.Close()
-		c.log("readPump closed")
+		c.close()
 	}()
 
 	for {
@@ -35,11 +50,16 @@ func (c *client) readPump() {
 
 		err := c.conn.ReadJSON(&v)
 		if err != nil {
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+			c.connClosed = true
+			if websocket.IsCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure,
+			) || errors.Is(err, net.ErrClosed) {
 				c.log("Tried to read, websocket closed")
 				break
 			}
-			c.log("error reading connection json: %v", err)
+			c.log("error reading connection json: %+v", err.Error())
 			break
 		}
 
@@ -57,13 +77,13 @@ func (c *client) readPump() {
 
 		switch w.Type {
 		case m.ClientMessageTypeClientQuit:
-            qm := m.ClientQuitMessage{}
+			qm := m.ClientQuitMessage{}
 			err = json.Unmarshal(w.Data, &qm)
-            cm = qm
+			cm = qm
 		case m.ClientMessageTypeSubmit:
-            sm := m.SubmitMessage{}
+			sm := m.SubmitMessage{}
 			err = json.Unmarshal(w.Data, &sm)
-            cm = sm
+			cm = sm
 		case m.ClientMessageTypeSkipLobby:
 			cm = m.SkipLobbyMessage{}
 		case m.ClientMessageTypeSkipQuestion:
@@ -79,37 +99,64 @@ func (c *client) readPump() {
 	}
 }
 
-func (c *client) writePump() {
-	defer func() {
-		c.conn.Close()
-		c.log("writePump closed")
-	}()
+// send message (non blocking)
+func (c *Client) send(msg m.ServerMessage) {
+	c.roomWrite <- PendingMessage{msg: msg, done: nil}
+}
 
-	for {
-		msg, ok := <-c.roomWrite
-		if !ok {
-			c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-			return
-		}
-		err := c.conn.WriteJSON(msg)
+// send message and returns done channel
+func (c *Client) sendAsync(msg m.ServerMessage) chan struct{} {
+	done := make(chan struct{})
+	c.roomWrite <- PendingMessage{msg: msg, done: done}
+	return done
+}
+
+func (c *Client) writePump() {
+	for pendingMsg := range c.roomWrite {
+		c.closedMu.Lock()
+		err := c.conn.WriteJSON(pendingMsg.msg)
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 				c.log("Tried to write, websocket closed")
 				break
 			}
-			c.log("error writing server message to json")
+			c.log("error writing server message to json %v", err)
 			return
 		}
+		c.closedMu.Unlock()
+
+		if pendingMsg.done != nil {
+			close(pendingMsg.done)
+		}
 	}
+
+	if !c.connClosed {
+		c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+	}
+	c.log("writePump closed")
 }
 
-func (c *client) playerInfo() m.PlayerInfo {
+func (c *Client) close() {
+	c.closedMu.Lock()
+	defer c.closedMu.Unlock()
+
+	if !c.closed {
+		close(c.roomWrite)
+	}
+	if !c.connClosed {
+		c.conn.Close()
+	}
+	c.closed = true
+	c.connClosed = true
+}
+
+func (c *Client) playerInfo() m.PlayerInfo {
 	return m.PlayerInfo{
 		Id:   c.id,
 		Name: c.name,
 	}
 }
 
-func (c *client) log(format string, v ...any) {
+func (c *Client) log(format string, v ...any) {
 	log.Printf("client %d: %s", c.id, fmt.Sprintf(format, v...))
 }

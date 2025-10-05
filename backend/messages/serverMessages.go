@@ -138,6 +138,8 @@ func NewRoundEndMessage(round int) RoundEndMessage {
 	return RoundEndMessage{
 		Type:  ServerMessageRoundEnd,
 		Round: round,
+		CurrentPlayers: []PlayerInfo{},
+		EliminatedPlayers: []PlayerInfo{},
 	}
 }
 func (m RoundEndMessage) serverMessage() {}

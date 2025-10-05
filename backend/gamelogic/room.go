@@ -11,7 +11,10 @@ import (
 	tr "leet-guys/testrunner"
 )
 
-type clientId = int
+// TODO: make locking vs unlocked API consistent
+// probably make everything unlocked by default
+
+type ClientId = int
 
 const ClientsPerRoom = 40
 
@@ -23,22 +26,21 @@ const Round4Time = 600 // 10 minutes
 
 const RoundBetweenTime = 5
 
-type room struct {
+type Room struct {
 	id       int
-	register chan *client
+	register chan *Client
 
 	roomRead chan m.ClientMessage
 
-	clientsMu   sync.RWMutex
-	clients     map[clientId]*client
-	clientsDone map[clientId]bool
-	clientsLeft []m.PlayerInfo
+	clientsMu sync.RWMutex
 
-	stateMu sync.Mutex
-	state   roomState
+	// contains all clients even those disconnected
+	clients map[ClientId]*Client
 
-	totalPlayers atomic.Int32
-	place        atomic.Int32
+	activeClientCount int
+
+	stateMu sync.RWMutex
+	state   RoomState
 
 	// states
 	waitingForPlayers
@@ -50,18 +52,20 @@ type room struct {
 
 	hub *Hub
 
-	done chan struct{}
+	done          chan struct{}
+	shutdownTimer chan struct{}
 }
 
-func newRoom(id int) *room {
-	r := &room{
+func newRoom(id int, hub *Hub) *Room {
+	r := &Room{
 		id:       id,
-		register: make(chan *client),
+		register: make(chan *Client),
 
 		roomRead: make(chan m.ClientMessage),
 
-		clients:     make(map[clientId]*client),
-		clientsDone: make(map[clientId]bool),
+		clients: make(map[ClientId]*Client),
+
+		hub: hub,
 	}
 
 	var x atomic.Int32
@@ -76,11 +80,17 @@ func newRoom(id int) *room {
 	return r
 }
 
-func (r *room) run() {
-    r.log("run called")
+func (r *Room) run() {
+	r.log("running")
 	r.setState(r.waitingForPlayers)
 
-    r.done = make(chan struct{})
+	r.done = make(chan struct{})
+	r.shutdownTimer = make(chan struct{})
+
+	defer func() {
+		close(r.register)
+		close(r.roomRead)
+	}()
 
 	for {
 		select {
@@ -92,21 +102,24 @@ func (r *room) run() {
 				r.countdownDone <- struct{}{}
 			}
 		case msg := <-r.roomRead:
-			r.state.handleClientMessage(msg)
+			r.stateMu.RLock()
+			go r.state.handleClientMessage(msg)
+			r.stateMu.RUnlock()
 		case <-r.done:
 			r.log("closing")
+			r.hub.unregisterRoom(r)
 			return
 		}
 	}
 
 }
 
-type roomState interface {
+type RoomState interface {
 	handleClientMessage(msg m.ClientMessage)
 }
 
 type waitingForPlayers struct {
-	r             *room
+	r             *Room
 	countdownDone chan struct{}
 }
 
@@ -120,7 +133,7 @@ func (s waitingForPlayers) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round1Running struct {
-	r          *room
+	r          *Room
 	timerDone  chan struct{}
 	questionId int
 	question   *tr.QuestionData
@@ -140,7 +153,7 @@ func (s round1Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round2Running struct {
-	r          *room
+	r          *Room
 	timerDone  chan struct{}
 	questionId int
 	question   *tr.QuestionData
@@ -160,7 +173,7 @@ func (s round2Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round3Running struct {
-	r                *room
+	r                *Room
 	timerDone        chan struct{}
 	questionId       int
 	question         *tr.QuestionData
@@ -172,7 +185,6 @@ func (s round3Running) handleClientMessage(msg m.ClientMessage) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
 	case m.SubmitMessage:
-		// TODO:
 		if s.r.runTestRunner(msg, s.questionId) {
 			if !s.r.isClientDone(msg.PlayerId) {
 				s.clientsSubmitted.Add(1)
@@ -188,7 +200,7 @@ func (s round3Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type round4Running struct {
-	r          *room
+	r          *Room
 	timerDone  chan struct{}
 	questionId int
 	question   *tr.QuestionData
@@ -199,9 +211,24 @@ func (s round4Running) handleClientMessage(msg m.ClientMessage) {
 	case m.ClientQuitMessage:
 		s.r.unregisterClient(msg.PlayerId)
 	case m.SubmitMessage:
+		// TODO: let players continue to play and communicate place
 		if s.r.runTestRunner(msg, s.questionId) {
-			s.r.setClientDone(msg.PlayerId)
-            s.r.sendMessageTo(msg.PlayerId, m.NewWinnerMessage())
+			s.r.clientsMu.Lock()
+
+			c := s.r.clients[msg.PlayerId]
+			c.done = true
+
+			done := c.sendAsync(m.NewWinnerMessage())
+
+			s.r.clientsMu.Unlock()
+
+			// Make sure we send the message before we close the room.
+			// There is a chance the client's connection closes
+			// before the message gets in its message queue, but
+			// client's writePump should handle the error
+			<-done
+
+			// FIXME: race condition can cause write on closed channel
 			s.timerDone <- struct{}{}
 		}
 	case m.SkipQuestionMessage:
@@ -210,14 +237,15 @@ func (s round4Running) handleClientMessage(msg m.ClientMessage) {
 }
 
 type gameEnded struct {
-	r *room
+	r *Room
 }
 
 func (s gameEnded) handleClientMessage(msg m.ClientMessage) {
 
 }
 
-func (r *room) runTestRunner(msg m.SubmitMessage, question int) bool {
+// runs tests for given submit message, returns whether test passed
+func (r *Room) runTestRunner(msg m.SubmitMessage, question int) bool {
 	var l tr.Language
 	switch msg.Language {
 	case "python":
@@ -229,34 +257,30 @@ func (r *room) runTestRunner(msg m.SubmitMessage, question int) bool {
 	}
 	res, err := tr.RunTest([]byte(msg.Code), l, question)
 	if err != nil {
-		log.Fatal(err)
+		r.log(err.Error())
 	}
 
-	r.sendMessageTo(msg.PlayerId, m.NewTestResultMessage(&res))
+	r.clientsMu.RLock()
+	defer r.clientsMu.RUnlock()
+
+	c := r.clients[msg.PlayerId]
+
+	c.send(m.NewTestResultMessage(&res))
 
 	correct, total := res.NCorrect()
+	passed := correct == total
 
-	c := r.getClient(msg.PlayerId)
-	r.broadcast(m.NewUpdateClientStateMessage(
+	r.broadcastUnlocked(m.NewUpdateClientStateMessage(
 		c.playerInfo(),
-		correct == total,
+		passed,
 		correct,
 		int(time.Now().Unix()),
 	))
 
-	return correct == total
+	return passed
 }
 
-func (r *room) setState(s roomState) {
-	r.clientsMu.RLock()
-	_, ok := s.(waitingForPlayers)
-	if !ok && len(r.clients) == 0 {
-		r.state = nil
-		close(r.done)
-		r.clientsMu.RUnlock()
-		return
-	}
-	r.clientsMu.RUnlock()
+func (r *Room) setState(s RoomState) {
 	switch s.(type) {
 	case waitingForPlayers:
 		go r.startCountdown(
@@ -297,218 +321,246 @@ func (r *room) setState(s roomState) {
 			nil,
 			r.round4Running.timerDone,
 		)
+	case gameEnded:
+		r.clientsMu.Lock()
+		for _, c := range r.clients {
+			if !c.closed {
+				c.close()
+			}
+		}
+		r.clientsMu.Unlock()
+		close(r.done)
 	}
+
 	r.stateMu.Lock()
+	defer r.stateMu.Unlock()
 	r.state = s
-	r.stateMu.Unlock()
 }
 
-func (r *room) registerClient(c *client) bool {
-	r.broadcast(m.NewClientJoinedMessage(c.playerInfo()))
+// registers client into lobby, returns whether room is full after register
+func (r *Room) registerClient(c *Client) bool {
+	r.clientsMu.Lock()
+	defer r.clientsMu.Unlock()
+
+	r.broadcastUnlocked(m.NewClientJoinedMessage(c.playerInfo()))
 
 	c.roomRead = r.roomRead
 	go c.readPump()
 
-	c.roomWrite <- m.NewRoomGreetingMessage(r.id, r.playersInfo())
-	log.Println("Greeting Message Written")
+	c.send(m.NewRoomGreetingMessage(r.id, r.playersInfoUnlocked()))
+	r.log("Greeting Message Written")
 
-	// r.clientsMu.Lock()
+	c.done = false
+	c.closed = false
+
 	r.clients[c.id] = c
-	r.clientsDone[c.id] = false
-	full := len(r.clients) == ClientsPerRoom
-	// r.clientsMu.Unlock()
 
-	r.totalPlayers.Add(1)
-	r.place.Add(1)
+	r.activeClientCount++
+	full := r.activeClientCount == ClientsPerRoom
 
 	return full
 }
 
-func (r *room) unregisterClient(clientId clientId) {
+// unregister client from lobby
+// sends done message if all clients have left the lobby
+// is the only function response for closing a client
+func (r *Room) unregisterClient(clientId ClientId) {
 	r.clientsMu.Lock()
+	defer r.clientsMu.Unlock()
+	r.unregisterClientUnlocked(clientId)
+}
+
+// requires clientsMu
+func (r *Room) unregisterClientUnlocked(clientId ClientId) {
 	c, ok := r.clients[clientId]
 	if !ok {
-		r.clientsMu.Unlock()
 		return
 	}
-	r.clientsLeft = append(r.clientsLeft, c.playerInfo())
-	delete(r.clients, clientId)
-	delete(r.clientsDone, clientId)
-	r.clientsMu.Unlock()
 
-	close(c.roomWrite)
+	if c.closed {
+		return
+	}
 
-	r.place.Add(-1)
+	c.close()
+	r.activeClientCount--
 
 	c.log("unregistered")
 
-	r.broadcast(m.NewClientLeftMessage(c.playerInfo()))
-}
+	r.broadcastUnlocked(m.NewClientLeftMessage(c.playerInfo()))
 
-func (r *room) broadcast(msg m.ServerMessage) {
-	r.clientsMu.RLock()
-	for _, ch := range r.clients {
-		ch.roomWrite <- msg
+	if r.activeClientCount == 0 {
+		r.log("all clients left")
+		close(r.done)
 	}
-	r.clientsMu.RUnlock()
 }
 
-func (r *room) sendMessageTo(clientId clientId, msg m.ServerMessage) {
-	r.clientsMu.RLock()
-	r.clients[clientId].roomWrite <- msg
-	r.clientsMu.RUnlock()
+// func (r *Room) broadcast(msg m.ServerMessage) {
+// 	r.clientsMu.RLock()
+// 	defer r.clientsMu.RUnlock()
+// 	r.broadcastUnlocked(msg)
+// }
+
+// Requires: clientsMu
+func (r *Room) broadcastUnlocked(msg m.ServerMessage) {
+	for _, c := range r.clients {
+		if !c.closed {
+			c.send(msg)
+		}
+	}
 }
 
-func (r *room) startRoundTimer(
+func (r *Room) startRoundTimer(
 	sec int,
-	nextState roomState,
-	endMessage m.RoundEndMessage,
-	nextMessage m.ServerMessage,
+	nextState RoomState,
+	endMessage m.RoundEndMessage, // message to send when round ends (immediate)
+	nextMessage m.ServerMessage, // message to send when going to next round (after cool down timer)
 	done chan struct{},
 ) {
-	defer func() {
-		r.setState(nextState)
-		if nextMessage != nil {
-			r.broadcast(nextMessage)
-		}
-	}()
+	defer close(done)
 
 	ticker := time.NewTicker(time.Duration(sec) * time.Second)
 	defer ticker.Stop()
 
 	select {
+
 	case <-done:
 		break
+
 	case <-ticker.C:
 		break
+
+	case <-r.shutdownTimer:
+		return
 	}
 
-	eliminatedPlayers, keptPlayers := r.handleEliminations()
-	endMessage.EliminatedPlayers = eliminatedPlayers
+	r.handleEliminations()
+
 	r.clientsMu.Lock()
-	endMessage.EliminatedPlayers = append(endMessage.EliminatedPlayers, r.clientsLeft...)
+
+	for _, c := range r.clients {
+		if c.closed {
+			endMessage.EliminatedPlayers = append(endMessage.EliminatedPlayers, c.playerInfo())
+		} else {
+			endMessage.CurrentPlayers = append(endMessage.CurrentPlayers, c.playerInfo())
+		}
+	}
+
+	r.broadcastUnlocked(endMessage)
+
+	for _, c := range r.clients {
+		if !c.closed {
+			c.done = false
+		}
+	}
+
 	r.clientsMu.Unlock()
-	endMessage.CurrentPlayers = keptPlayers
-
-	r.broadcast(endMessage)
-
-	r.resetDone()
 
 	time.Sleep(RoundBetweenTime * time.Second)
+
+	r.setState(nextState)
+
+	r.clientsMu.Lock()
+	if nextMessage != nil {
+		r.broadcastUnlocked(nextMessage)
+	}
+	r.clientsMu.Unlock()
 }
 
-func (r *room) startCountdown(sec int, nextState roomState, broadcastMessage m.ServerMessage, done chan struct{}) {
-	defer func() {
-		r.setState(nextState)
-		r.broadcast(broadcastMessage)
-	}()
-
+func (r *Room) startCountdown(sec int, nextState RoomState, broadcastMessage m.ServerMessage, done chan struct{}) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
+timerLoop:
 	for i := sec; i >= 1; i-- {
 		select {
 		case <-done:
-			return
+			break timerLoop
+
 		case <-ticker.C:
-			r.broadcast(m.NewCountdownMessage(i))
+			r.clientsMu.Lock()
+			r.broadcastUnlocked(m.NewCountdownMessage(i))
+			r.clientsMu.Unlock()
+
+		case <-r.shutdownTimer:
+			return
 		}
 	}
+
+	r.setState(nextState)
+
+	r.clientsMu.Lock()
+	r.broadcastUnlocked(broadcastMessage)
+	r.clientsMu.Unlock()
 }
 
-func (r *room) handleEliminations() ([]m.PlayerInfo, []m.PlayerInfo) {
-	var eliminatedClients []m.PlayerInfo
-	var keptClients []m.PlayerInfo
-	r.log("clientsDone: %+v", r.clientsDone)
+func (r *Room) handleEliminations() {
 	r.clientsMu.Lock()
 	defer r.clientsMu.Unlock()
-	toDelete := []int{}
-	for cId, finished := range r.clientsDone {
-		c := r.clients[cId]
-		if !finished {
-			eliminatedClients = append(eliminatedClients, c.playerInfo())
-			r.clients[cId].roomWrite <- m.NewClientEliminatedMessage(
-				c.playerInfo(),
-				int(r.place.Load()),
-				int(r.totalPlayers.Load()),
-			)
 
-			delete(r.clients, cId)
-			toDelete = append(toDelete, cId)
-			close(c.roomWrite)
-			r.place.Add(-1)
-			c.log("eliminated")
-			for _, ch := range r.clients {
-				ch.roomWrite <- m.NewClientLeftMessage(c.playerInfo())
-			}
-		} else {
-			keptClients = append(keptClients, c.playerInfo())
+	type ClientDone struct {
+		done chan struct{}
+		c    *Client
+	}
+
+	dones := make([]ClientDone, 0, len(r.clients))
+
+	for _, c := range r.clients {
+		if !c.done && !c.closed {
+			msg := m.NewClientEliminatedMessage(
+				c.playerInfo(),
+				r.activeClientCount,
+				len(r.clients),
+			)
+			done := c.sendAsync(msg)
+			dones = append(dones, ClientDone{done: done, c: c})
 		}
 	}
-	for _, cId := range toDelete {
-		delete(r.clientsDone, cId)
+
+	for _, cd := range dones {
+		<-cd.done
+		r.unregisterClientUnlocked(cd.c.id)
+		cd.c.log("eliminated")
 	}
-	return eliminatedClients, keptClients
 }
 
-func (r *room) setClientDone(clientId int) {
+func (r *Room) setClientDone(clientId ClientId) {
 	r.clientsMu.Lock()
-	r.clientsDone[clientId] = true
-	r.clientsMu.Unlock()
+	defer r.clientsMu.Unlock()
+	r.clients[clientId].done = true
 }
 
-func (r *room) isClientDone(clientId int) bool {
+func (r *Room) isClientDone(clientId ClientId) bool {
 	r.clientsMu.RLock()
-	done := r.clientsDone[clientId]
-	r.clientsMu.RUnlock()
-	return done
+	defer r.clientsMu.RUnlock()
+	return r.clients[clientId].done
 }
 
-func (r *room) resetDone() {
-	r.clientsMu.Lock()
-	for clientsId := range r.clientsDone {
-		r.clientsDone[clientsId] = false
-	}
-	r.clientsLeft = nil
-	r.clientsMu.Unlock()
-}
-
-func (r *room) playersInfo() []m.PlayerInfo {
-	r.clientsMu.RLock()
+func (r *Room) playersInfoUnlocked() []m.PlayerInfo {
 	playersInfo := make([]m.PlayerInfo, 0, len(r.clients))
 	for _, client := range r.clients {
 		playersInfo = append(playersInfo, client.playerInfo())
 	}
-	r.clientsMu.RUnlock()
 	return playersInfo
 }
 
-func (r *room) isOpen() bool {
+func (r *Room) isOpen() bool {
 	r.clientsMu.RLock()
 	if len(r.clients) == ClientsPerRoom {
 		return false
 	}
 	r.clientsMu.RUnlock()
-	r.stateMu.Lock()
+	r.stateMu.RLock()
+	defer r.stateMu.RUnlock()
 	_, ok := r.state.(waitingForPlayers)
-	r.stateMu.Unlock()
 	return ok
 }
 
-func (r *room) isRunning() bool {
-	r.stateMu.Lock()
-	running := r.state != nil
-	r.stateMu.Unlock()
-	return running
-}
-
-func (r *room) getClient(clientId clientId) *client {
+func (r *Room) clientCount() int {
 	r.clientsMu.RLock()
-	client := r.clients[clientId]
-	r.clientsMu.RUnlock()
-	return client
+	defer r.clientsMu.RUnlock()
+	return r.activeClientCount
 }
 
-func (r *room) log(format string, v ...any) {
+func (r *Room) log(format string, v ...any) {
 	log.Printf("room %d: %s", r.id, fmt.Sprintf(format, v...))
 }

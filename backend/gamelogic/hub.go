@@ -3,55 +3,82 @@ package gamelogic
 import (
 	"log"
 	"net/http"
-	"time"
+	"sync"
+
+	m "leet-guys/messages"
 
 	"github.com/gorilla/websocket"
-	m "leet-guys/messages"
 )
 
 var cId int = 0
 
-const MaxRooms = 10
-
 type Hub struct {
-	register chan *client
+	registerClientQueue chan *Client
+	unregisterRoomQueue chan *Room
 
-	rooms [MaxRooms]*room
+	roomsMu sync.Mutex
+	rooms   []*Room
 }
 
 func NewHub() *Hub {
 	h := &Hub{
-		register: make(chan *client, ClientsPerRoom*10),
-	}
-
-	for i := 0; i < MaxRooms; i++ {
-		h.rooms[i] = newRoom(i)
+		registerClientQueue: make(chan *Client, ClientsPerRoom*10),
+		rooms:               []*Room{},
 	}
 
 	return h
 }
 
 func (h *Hub) Run() {
-	defer func() {
-		close(h.register)
-	}()
 	log.Println("Hub Started")
-	for {
-		client := <-h.register
-		log.Println("Client Recieved in Hub")
 
-		for _, room := range h.rooms {
-			if !room.isRunning() {
-				go room.run()
-			} else if !room.isOpen() {
-				continue
-			}
-			client.log("registered to room %d", room.id)
-			room.register <- client
-			break
+	for client := range h.registerClientQueue {
+			log.Println("Client Recieved in Hub")
+
+			r := h.findBestRoom()
+
+			r.register <- client
+	}
+}
+
+func (h *Hub) findBestRoom() *Room {
+	h.roomsMu.Lock()
+	defer h.roomsMu.Unlock()
+
+	maxFill := -1
+	var r *Room
+
+	for _, room := range h.rooms {
+		if room.isOpen() && room.clientCount() > maxFill {
+			r = room
+			maxFill = room.clientCount()
 		}
+	}
 
-		time.Sleep(100 * time.Millisecond)
+	if r != nil {
+		return r
+	}
+
+	log.Println("New room created")
+
+	r = newRoom(len(h.rooms), h)
+	h.rooms = append(h.rooms, r)
+
+	go r.run()
+
+	return r
+}
+
+func (h *Hub) unregisterRoom(r *Room) {
+	h.roomsMu.Lock()
+	defer h.roomsMu.Unlock()
+
+	for i, room := range h.rooms {
+		if room == r {
+			h.rooms[i] = h.rooms[len(h.rooms)-1]
+			h.rooms = h.rooms[:len(h.rooms)-1]
+			return
+		}
 	}
 }
 
@@ -73,12 +100,12 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 
 	name := queryParams.Get("name")
 
-	c := &client{
+	c := &Client{
 		id:   cId,
 		name: name,
 		conn: conn,
 
-		roomWrite: make(chan m.ServerMessage),
+		roomWrite: make(chan PendingMessage),
 	}
 
 	var cmw m.ClientMessageWrapper
@@ -102,7 +129,7 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 
 	go c.writePump()
 
-	h.register <- c
+	h.registerClientQueue <- c
 
 	cId++
 }
