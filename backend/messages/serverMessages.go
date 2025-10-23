@@ -134,12 +134,12 @@ type RoundEndMessage struct {
 	EliminatedPlayers []PlayerInfo      `json:"eliminatedPlayers"`
 }
 
-func NewRoundEndMessage(round int) RoundEndMessage {
+func NewRoundEndMessage(round int, currentPlayers, eliminatedPlayers []PlayerInfo) RoundEndMessage {
 	return RoundEndMessage{
-		Type:  ServerMessageRoundEnd,
-		Round: round,
-		CurrentPlayers: []PlayerInfo{},
-		EliminatedPlayers: []PlayerInfo{},
+		Type:              ServerMessageRoundEnd,
+		Round:             round,
+		CurrentPlayers:    currentPlayers,
+		EliminatedPlayers: eliminatedPlayers,
 	}
 }
 func (m RoundEndMessage) serverMessage() {}

@@ -33,25 +33,22 @@ func (h *Hub) Run() {
 	log.Println("Hub Started")
 
 	for client := range h.registerClientQueue {
-			log.Println("Client Recieved in Hub")
+		log.Println("Client Recieved in Hub")
 
-			r := h.findBestRoom()
+		r := h.findBestRoom()
 
-			r.register <- client
+		r.register <- client
 	}
 }
 
 func (h *Hub) findBestRoom() *Room {
-	h.roomsMu.Lock()
-	defer h.roomsMu.Unlock()
-
 	maxFill := -1
 	var r *Room
 
 	for _, room := range h.rooms {
-		if room.isOpen() && room.clientCount() > maxFill {
+		if room.isOpen() && len(room.clients) > maxFill {
 			r = room
-			maxFill = room.clientCount()
+			maxFill = len(room.clients)
 		}
 	}
 
@@ -105,7 +102,7 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 		name: name,
 		conn: conn,
 
-		roomWrite: make(chan PendingMessage),
+		roomWrite: make(chan m.ServerMessage),
 	}
 
 	var cmw m.ClientMessageWrapper

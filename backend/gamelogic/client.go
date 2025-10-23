@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 
 	m "leet-guys/messages"
 
@@ -17,19 +16,16 @@ type Client struct {
 	id   int
 	name string
 
-	conn       *websocket.Conn
-	connClosed bool
+	conn *websocket.Conn
 
 	hub *Hub
 
-	roomWrite chan PendingMessage
+	roomWrite chan m.ServerMessage
 	roomRead  chan m.ClientMessage
 
 	// room things
 	done   bool
 	closed bool
-
-	closedMu sync.Mutex
 }
 
 type PendingMessage struct {
@@ -38,19 +34,11 @@ type PendingMessage struct {
 }
 
 func (c *Client) readPump() {
-	defer func() {
-		if c.roomRead != nil {
-			c.roomRead <- m.ClientQuitMessage{PlayerId: c.id}
-		}
-		c.close()
-	}()
-
 	for {
 		var v json.RawMessage
 
 		err := c.conn.ReadJSON(&v)
 		if err != nil {
-			c.connClosed = true
 			if websocket.IsCloseError(err,
 				websocket.CloseNormalClosure,
 				websocket.CloseGoingAway,
@@ -97,24 +85,22 @@ func (c *Client) readPump() {
 
 		c.roomRead <- cm
 	}
+
+	if c.roomRead != nil && !c.closed {
+		c.roomRead <- m.ClientQuitMessage{PlayerId: c.id}
+	}
+	close(c.roomWrite)
+	c.log("readPump closed")
 }
 
-// send message (non blocking)
 func (c *Client) send(msg m.ServerMessage) {
-	c.roomWrite <- PendingMessage{msg: msg, done: nil}
-}
-
-// send message and returns done channel
-func (c *Client) sendAsync(msg m.ServerMessage) chan struct{} {
-	done := make(chan struct{})
-	c.roomWrite <- PendingMessage{msg: msg, done: done}
-	return done
+	c.roomWrite <- msg
 }
 
 func (c *Client) writePump() {
-	for pendingMsg := range c.roomWrite {
-		c.closedMu.Lock()
-		err := c.conn.WriteJSON(pendingMsg.msg)
+	for msg := range c.roomWrite {
+		err := c.conn.WriteJSON(msg)
+
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 				c.log("Tried to write, websocket closed")
@@ -123,31 +109,15 @@ func (c *Client) writePump() {
 			c.log("error writing server message to json %v", err)
 			return
 		}
-		c.closedMu.Unlock()
 
-		if pendingMsg.done != nil {
-			close(pendingMsg.done)
+		switch msg.(type) {
+		case m.ClientEliminatedMessage, m.WinnerMessage:
+			c.conn.Close()
 		}
 	}
 
-	if !c.connClosed {
-		c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-	}
+	c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 	c.log("writePump closed")
-}
-
-func (c *Client) close() {
-	c.closedMu.Lock()
-	defer c.closedMu.Unlock()
-
-	if !c.closed {
-		close(c.roomWrite)
-	}
-	if !c.connClosed {
-		c.conn.Close()
-	}
-	c.closed = true
-	c.connClosed = true
 }
 
 func (c *Client) playerInfo() m.PlayerInfo {
