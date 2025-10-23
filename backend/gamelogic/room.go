@@ -39,6 +39,8 @@ type Room struct {
 	done      chan struct{}
 
 	hub *Hub
+
+	questionIds [4]int
 }
 
 func newRoom(id int, hub *Hub) *Room {
@@ -54,6 +56,8 @@ func newRoom(id int, hub *Hub) *Room {
 		done:      make(chan struct{}),
 
 		hub: hub,
+
+		questionIds: [4]int{0, 4, 5, 7},
 	}
 
 	return r
@@ -182,10 +186,9 @@ func (waitingForPlayers) handleSubmitMessage(m.SubmitMessage) {
 type round1Running struct {
 	r          *Room
 	questionId int
-	question   *tr.QuestionData
 }
 
-func (s round1Running) getQuestion() *tr.QuestionData { return s.question }
+func (s round1Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
 
 func (s round1Running) handleSubmitMessage(msg m.SubmitMessage) {
 	if s.r.runTestRunner(msg, s.questionId) {
@@ -196,10 +199,9 @@ func (s round1Running) handleSubmitMessage(msg m.SubmitMessage) {
 type round2Running struct {
 	r          *Room
 	questionId int
-	question   *tr.QuestionData
 }
 
-func (s round2Running) getQuestion() *tr.QuestionData { return s.question }
+func (s round2Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
 
 func (s round2Running) handleSubmitMessage(msg m.SubmitMessage) {
 	if s.r.runTestRunner(msg, s.questionId) {
@@ -211,11 +213,10 @@ type round3Running struct {
 	r                *Room
 	timerDone        chan struct{}
 	questionId       int
-	question         *tr.QuestionData
 	clientsSubmitted int
 }
 
-func (s round3Running) getQuestion() *tr.QuestionData { return s.question }
+func (s round3Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
 
 func (s round3Running) handleSubmitMessage(msg m.SubmitMessage) {
 	if s.r.runTestRunner(msg, s.questionId) {
@@ -230,10 +231,9 @@ func (s round3Running) handleSubmitMessage(msg m.SubmitMessage) {
 type round4Running struct {
 	r          *Room
 	questionId int
-	question   *tr.QuestionData
 }
 
-func (s round4Running) getQuestion() *tr.QuestionData { return s.question }
+func (s round4Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
 
 func (s round4Running) handleSubmitMessage(msg m.SubmitMessage) {
 	if s.r.runTestRunner(msg, s.questionId) {
@@ -299,8 +299,7 @@ func (r *Room) setWaitingForPlayers() {
 func (r *Room) setRound1Running() time.Duration {
 	s := round1Running{
 		r:          r,
-		questionId: 0,
-		question:   &tr.Questions[0],
+		questionId: r.questionIds[0],
 	}
 	r.state = s
 	return Round1Time
@@ -309,8 +308,7 @@ func (r *Room) setRound1Running() time.Duration {
 func (r *Room) setRound2Running() time.Duration {
 	s := round2Running{
 		r:          r,
-		questionId: 4,
-		question:   &tr.Questions[4],
+		questionId: r.questionIds[1],
 	}
 	r.state = s
 	return Round2Time
@@ -319,8 +317,7 @@ func (r *Room) setRound2Running() time.Duration {
 func (r *Room) setRound3Running() time.Duration {
 	s := round3Running{
 		r:          r,
-		questionId: 5,
-		question:   &tr.Questions[5],
+		questionId: r.questionIds[2],
 	}
 	r.state = s
 	return Round3Time
@@ -329,8 +326,7 @@ func (r *Room) setRound3Running() time.Duration {
 func (r *Room) setRound4Running() time.Duration {
 	s := round4Running{
 		r:          r,
-		questionId: 7,
-		question:   &tr.Questions[7],
+		questionId: r.questionIds[3],
 	}
 	r.state = s
 	return Round4Time
