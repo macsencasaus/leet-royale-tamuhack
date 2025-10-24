@@ -37,9 +37,10 @@ type ClientQuitMessage struct {
 func (m ClientQuitMessage) clientMessage() {}
 
 type SubmitMessage struct {
-	PlayerId int    `json:"playerId"`
-	Language string `json:"language"`
-	Code     string `json:"code"`
+	PlayerId   int    `json:"playerId"`
+	QuestionId int    `json:"questionId"`
+	Language   string `json:"language"`
+	Code       string `json:"code"`
 }
 
 func (m SubmitMessage) clientMessage() {}

@@ -8,6 +8,7 @@ import (
 	"net"
 
 	m "leet-guys/messages"
+	tr "leet-guys/testrunner"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,7 +22,7 @@ type Client struct {
 	hub *Hub
 
 	roomWrite chan m.ServerMessage
-	roomRead  chan m.ClientMessage
+	roomRead  chan ClientRoomMessage
 
 	// room things
 	done   bool
@@ -51,8 +52,6 @@ func (c *Client) readPump() {
 			break
 		}
 
-		c.log("message received: %s", v)
-
 		var w m.ClientMessageWrapper
 
 		err = json.Unmarshal(v, &w)
@@ -61,21 +60,46 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		var cm m.ClientMessage
+		var cm ClientRoomMessage
 
 		switch w.Type {
+
 		case m.ClientMessageTypeClientQuit:
 			qm := m.ClientQuitMessage{}
 			err = json.Unmarshal(w.Data, &qm)
-			cm = qm
+			cm = Quit{c.id}
+
 		case m.ClientMessageTypeSubmit:
 			sm := m.SubmitMessage{}
 			err = json.Unmarshal(w.Data, &sm)
-			cm = sm
-		case m.ClientMessageTypeSkipLobby:
-			cm = m.SkipLobbyMessage{}
-		case m.ClientMessageTypeSkipQuestion:
-			cm = m.SkipQuestionMessage{}
+			if err != nil {
+				break
+			}
+
+			var l tr.Language
+			switch sm.Language {
+			case "python":
+				l = tr.Python
+			case "javascript":
+				l = tr.Javascript
+			case "cpp":
+				l = tr.CPP
+			}
+			res, err := tr.RunTest([]byte(sm.Code), l, sm.QuestionId)
+			if err != nil {
+				c.log("Error running test: %v", err)
+				continue
+			}
+			c.send(m.NewTestResultMessage(res))
+			cm = Submit{
+				playerId:   c.id,
+				questionId: sm.QuestionId,
+				results:    res,
+			}
+
+		case m.ClientMessageTypeSkipLobby, m.ClientMessageTypeSkipQuestion:
+			cm = Skip{}
+
 		}
 
 		if err != nil {
@@ -87,7 +111,7 @@ func (c *Client) readPump() {
 	}
 
 	if c.roomRead != nil && !c.closed {
-		c.roomRead <- m.ClientQuitMessage{PlayerId: c.id}
+		c.roomRead <- Quit{c.id}
 	}
 	close(c.roomWrite)
 	c.log("readPump closed")

@@ -23,6 +23,7 @@ function EditorPanel() {
     });
     const [running, setRunning] = useState(false);
     const [done, setDone] = useState(false);
+    const [questionId, setQuestionId] = useState<number>(-1);
 
     const { player, sendMessage } = useWebSocket(onMessage);
 
@@ -31,6 +32,7 @@ function EditorPanel() {
             case "ServerMessageRoundStart":
                 setTemplates(message.templates);
                 setCode(message.templates);
+                setQuestionId(message.questionId);
                 setRunning(false);
                 setDone(false);
                 break;
@@ -65,7 +67,8 @@ function EditorPanel() {
 
         sendMessage("ClientMessageSubmit", {
             playerId: player?.id,
-            language,
+            questionId: questionId,
+            language: language,
             code: code[language],
         });
     }

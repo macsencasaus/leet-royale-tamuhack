@@ -6,7 +6,6 @@ import (
 	"time"
 
 	m "leet-guys/messages"
-	tr "leet-guys/testrunner"
 )
 
 type ClientId = int
@@ -27,7 +26,7 @@ type Room struct {
 	id       int
 	register chan *Client
 
-	roomRead chan m.ClientMessage
+	roomRead chan ClientRoomMessage
 
 	// contains all clients even those disconnected
 	clients           map[ClientId]*Client
@@ -49,7 +48,7 @@ func newRoom(id int, hub *Hub) *Room {
 		id:       id,
 		register: make(chan *Client),
 
-		roomRead: make(chan m.ClientMessage),
+		roomRead: make(chan ClientRoomMessage),
 
 		clients: make(map[ClientId]*Client),
 
@@ -89,16 +88,16 @@ func (r *Room) run() {
 		case msg := <-r.roomRead:
 			switch msg := msg.(type) {
 
-			case m.ClientQuitMessage:
-				r.unregisterClient(r.clients[msg.PlayerId])
+			case Quit:
+				r.unregisterClient(r.clients[msg.playerId])
 
-			case m.SubmitMessage:
+			case Submit:
 				r.state.handleSubmitMessage(msg)
 				if r.everyoneDone() {
 					r.endRound()
 				}
 
-			case m.SkipQuestionMessage, m.SkipLobbyMessage:
+			case Skip:
 				if r.hub.debug {
 					r.endRound()
 				}
@@ -150,7 +149,7 @@ func (r *Room) run() {
 			r.broadcast(m.NewRoundStartMessage(
 				round,
 				int(nextTimerDuration/time.Second),
-				r.state.getQuestion(),
+				r.state.getQuestionId(),
 			))
 		}
 	}
@@ -173,17 +172,17 @@ func (r *Room) end() {
 }
 
 type RoomState interface {
-	handleSubmitMessage(msg m.SubmitMessage)
-	getQuestion() *tr.QuestionData
+	getQuestionId() int
+	handleSubmitMessage(msg Submit)
 }
 
 type waitingForPlayers struct {
 	r *Room
 }
 
-func (waitingForPlayers) getQuestion() *tr.QuestionData { return nil }
+func (s waitingForPlayers) getQuestionId() int { return -1 }
 
-func (waitingForPlayers) handleSubmitMessage(m.SubmitMessage) {
+func (waitingForPlayers) handleSubmitMessage(Submit) {
 }
 
 type round1Running struct {
@@ -191,11 +190,11 @@ type round1Running struct {
 	questionId int
 }
 
-func (s round1Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
+func (s round1Running) getQuestionId() int { return s.questionId }
 
-func (s round1Running) handleSubmitMessage(msg m.SubmitMessage) {
-	if s.r.runTestRunner(msg, s.questionId) {
-		s.r.clients[msg.PlayerId].done = true
+func (s round1Running) handleSubmitMessage(msg Submit) {
+	if s.r.globalSubmitHandler(msg) {
+		s.r.clients[msg.playerId].done = true
 	}
 }
 
@@ -204,11 +203,11 @@ type round2Running struct {
 	questionId int
 }
 
-func (s round2Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
+func (s round2Running) getQuestionId() int { return s.questionId }
 
-func (s round2Running) handleSubmitMessage(msg m.SubmitMessage) {
-	if s.r.runTestRunner(msg, s.questionId) {
-		s.r.clients[msg.PlayerId].done = true
+func (s round2Running) handleSubmitMessage(msg Submit) {
+	if s.r.globalSubmitHandler(msg) {
+		s.r.clients[msg.playerId].done = true
 	}
 }
 
@@ -219,11 +218,11 @@ type round3Running struct {
 	clientsSubmitted int
 }
 
-func (s round3Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
+func (s round3Running) getQuestionId() int { return s.questionId }
 
-func (s round3Running) handleSubmitMessage(msg m.SubmitMessage) {
-	if s.r.runTestRunner(msg, s.questionId) {
-		s.r.clients[msg.PlayerId].done = true
+func (s round3Running) handleSubmitMessage(msg Submit) {
+	if s.r.globalSubmitHandler(msg) {
+		s.r.clients[msg.playerId].done = true
 		s.clientsSubmitted++
 		if s.clientsSubmitted == 10 {
 			s.r.endRound()
@@ -236,11 +235,11 @@ type round4Running struct {
 	questionId int
 }
 
-func (s round4Running) getQuestion() *tr.QuestionData { return &tr.Questions[s.questionId] }
+func (s round4Running) getQuestionId() int { return s.questionId }
 
-func (s round4Running) handleSubmitMessage(msg m.SubmitMessage) {
-	if s.r.runTestRunner(msg, s.questionId) {
-		c := s.r.clients[msg.PlayerId]
+func (s round4Running) handleSubmitMessage(msg Submit) {
+	if s.r.globalSubmitHandler(msg) {
+		c := s.r.clients[msg.playerId]
 		c.done = true
 		c.send(m.NewWinnerMessage())
 		s.r.endRound()
@@ -248,37 +247,37 @@ func (s round4Running) handleSubmitMessage(msg m.SubmitMessage) {
 }
 
 // runs tests for given submit message, returns whether test passed
-func (r *Room) runTestRunner(msg m.SubmitMessage, question int) bool {
-	var l tr.Language
-	switch msg.Language {
-	case "python":
-		l = tr.Python
-	case "javascript":
-		l = tr.Javascript
-	case "cpp":
-		l = tr.CPP
-	}
-	res, err := tr.RunTest([]byte(msg.Code), l, question)
-	if err != nil {
-		r.log(err.Error())
-	}
-
-	c := r.clients[msg.PlayerId]
-
-	c.send(m.NewTestResultMessage(&res))
-
-	correct, total := res.NCorrect()
-	passed := correct == total
-
-	r.broadcast(m.NewUpdateClientStateMessage(
-		c.playerInfo(),
-		passed,
-		correct,
-		int(time.Now().Unix()),
-	))
-
-	return passed
-}
+// func (r *Room) runTestRunner(msg m.SubmitMessage, question int) bool {
+// 	var l tr.Language
+// 	switch msg.Language {
+// 	case "python":
+// 		l = tr.Python
+// 	case "javascript":
+// 		l = tr.Javascript
+// 	case "cpp":
+// 		l = tr.CPP
+// 	}
+// 	res, err := tr.RunTest([]byte(msg.Code), l, question)
+// 	if err != nil {
+// 		r.log(err.Error())
+// 	}
+//
+// 	c := r.clients[msg.PlayerId]
+//
+// 	c.send(m.NewTestResultMessage(res))
+//
+// 	correct, total := res.NCorrect()
+// 	passed := correct == total
+//
+// 	r.broadcast(m.NewUpdateClientStateMessage(
+// 		c.playerInfo(),
+// 		passed,
+// 		correct,
+// 		int(time.Now().Unix()),
+// 	))
+//
+// 	return passed
+// }
 
 func (r *Room) nextState() (time.Duration, int) {
 	switch r.state.(type) {
@@ -380,6 +379,19 @@ func (r *Room) broadcast(msg m.ServerMessage) {
 			c.send(msg)
 		}
 	}
+}
+
+func (r *Room) globalSubmitHandler(msg Submit) bool {
+	c := r.clients[msg.playerId]
+	correct, total := msg.results.NCorrect()
+	passed := correct == total
+	r.broadcast(m.NewUpdateClientStateMessage(
+		c.playerInfo(),
+		passed,
+		correct,
+		int(time.Now().Unix()),
+	))
+	return passed
 }
 
 func (r *Room) handleEliminations() {

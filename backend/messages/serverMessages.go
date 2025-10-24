@@ -96,6 +96,7 @@ func (m ClientLeftMessage) serverMessage() {}
 type RoundStartMessage struct {
 	Type             ServerMessageType            `json:"type"`
 	Round            int                          `json:"round"`
+	QuestionId       int                          `json:"questionId"`
 	Time             int                          `json:"time"`
 	Prompt           string                       `json:"prompt"`
 	Templates        tr.LanguageFunctionTemplates `json:"templates"`
@@ -106,22 +107,24 @@ type RoundStartMessage struct {
 func NewRoundStartMessage(
 	round int,
 	sec int,
-	rd *tr.QuestionData,
+	questionId int,
 ) RoundStartMessage {
-	visibleTestCases := make([]TestCase, rd.VisibleCases)
+	q := &tr.Questions[questionId]
+	visibleTestCases := make([]TestCase, q.VisibleCases)
 	for i := range visibleTestCases {
 		visibleTestCases[i] = TestCase{
-			Input:  fmt.Sprintf("%+v", rd.Cases[i]),
-			Output: rd.ExpectedResults[i],
+			Input:  fmt.Sprintf("%+v", q.Cases[i]),
+			Output: q.ExpectedResults[i],
 		}
 	}
 	return RoundStartMessage{
 		Type:             ServerMessageRoundStart,
 		Round:            round,
+		QuestionId:       questionId,
 		Time:             sec,
-		Prompt:           rd.Prompt,
-		Templates:        rd.Templates,
-		NumTestCases:     rd.NumCases,
+		Prompt:           q.Prompt,
+		Templates:        q.Templates,
+		NumTestCases:     q.NumCases,
 		VisibleTestCases: visibleTestCases,
 	}
 }
@@ -151,7 +154,7 @@ type TestResultMessage struct {
 	Cases []ResultCase      `json:"cases"`
 }
 
-func NewTestResultMessage(res *tr.Result) TestResultMessage {
+func NewTestResultMessage(res tr.Result) TestResultMessage {
 	var tle bool
 
 	tle = res.Issue == tr.RunTime
