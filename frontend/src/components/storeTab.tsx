@@ -5,89 +5,89 @@ import { Button } from "./ui/button";
 import { Disc3, Lightbulb, ShieldAlert, Snowflake } from "lucide-react";
 
 function StoreTab() {
-	const onMessage = useCallback((message: Message) => {
-		switch (message.type) {
-			case "ServerMessageUpdateClientStatus":
-				break;
-		}
-	}, []);
+    const onMessage = useCallback((message: Message) => {
+        switch (message.type) {
+            case "ServerMessageUpdateClientStatus":
+                break;
+        }
+    }, []);
 
-	const { sendMessage } = useWebSocket(onMessage);
+    const { sendMessage } = useWebSocket(onMessage);
 
-	function buyItem(item: Items) {
-		sendMessage("ClientMessageBuyItem", { item });
-	}
+    function buyItem(item: Items) {
+        sendMessage("ClientMessageBuyItem", { item });
+    }
 
-	const items: Record<
-		Items,
-		{
-			name: string;
-			price: number;
-			desc: string;
-			icon: any;
-		}
-	> = {
-		"ad-space": {
-			name: "Ad Space",
-			icon: <ShieldAlert />,
-			price: 0,
-			desc: "Play annoying ads on the enemy's screen.",
-		},
-		"dvd-logo": {
-			name: "DvD Logo",
-			icon: <Disc3 />,
-			price: 0,
-			desc: "Deploy a DvD logo to distract your opponent while they code.",
-		},
-		"light-mode": {
-			name: "Light Mode",
-			price: 0,
-			desc: "Make the opponent's code editor enter light mode.",
-			icon: <Lightbulb/>,
-		},
-		freeze: {
-			name: "",
-			price: 0,
-			desc: "",
-			icon: <Snowflake />,
-		},
-		"remove-all": {
-			name: "",
-			price: 0,
-			desc: "",
-			icon: undefined,
-		},
-		"remove-line": {
-			name: "",
-			price: 0,
-			desc: "",
-			icon: undefined,
-		},
-		"arrow-only": {
-			name: "",
-			price: 0,
-			desc: "",
-			icon: undefined,
-		},
-	};
+    const items: Record<
+        Items,
+        {
+            name: string;
+            price: number;
+            desc: string;
+            icon: any;
+        }
+    > = {
+        "ad-space": {
+            name: "Ad Space",
+            icon: <ShieldAlert />,
+            price: 0,
+            desc: "Play annoying ads on the enemy's screen.",
+        },
+        "dvd-logo": {
+            name: "DvD Logo",
+            icon: <Disc3 />,
+            price: 0,
+            desc: "Deploy a DvD logo to distract your opponent while they code.",
+        },
+        "light-mode": {
+            name: "Light Mode",
+            price: 0,
+            desc: "Make the opponent's code editor enter light mode.",
+            icon: <Lightbulb />,
+        },
+        freeze: {
+            name: "",
+            price: 0,
+            desc: "",
+            icon: <Snowflake />,
+        },
+        "remove-all": {
+            name: "",
+            price: 0,
+            desc: "",
+            icon: undefined,
+        },
+        "remove-line": {
+            name: "",
+            price: 0,
+            desc: "",
+            icon: undefined,
+        },
+        "arrow-only": {
+            name: "",
+            price: 0,
+            desc: "",
+            icon: undefined,
+        },
+    };
 
-	return (
-		<div className="flex flex-col gap-2 items-start">
-			{Object.entries(items).map(([item, data]) => (
-				<div>
-					<Button
-						variant={"outline"}
-						className="flex gap-2"
-						onClick={() => buyItem(item as Items)}
-					>
-						{data.icon}
-						{data.name}
-					</Button>
-					<p>{data.desc}</p>
-				</div>
-			))}
-		</div>
-	);
+    return (
+        <div className="flex flex-col gap-2 items-start">
+            {Object.entries(items).map(([item, data]) => (
+                <div>
+                    <Button
+                        variant={"outline"}
+                        className="flex gap-2"
+                        onClick={() => buyItem(item as Items)}
+                    >
+                        {data.icon}
+                        {data.name}
+                    </Button>
+                    <p>{data.desc}</p>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 export default StoreTab;
