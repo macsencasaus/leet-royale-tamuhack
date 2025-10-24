@@ -3,7 +3,6 @@ package gamelogic
 import (
 	"log"
 	"net/http"
-	"sync"
 
 	m "leet-guys/messages"
 
@@ -11,19 +10,17 @@ import (
 )
 
 var cId int = 0
+var rId int = 0
 
 type Hub struct {
 	registerClientQueue chan *Client
-	unregisterRoomQueue chan *Room
 
-	roomsMu sync.Mutex
-	rooms   []*Room
+	room *Room
 }
 
 func NewHub() *Hub {
 	h := &Hub{
 		registerClientQueue: make(chan *Client, ClientsPerRoom*10),
-		rooms:               []*Room{},
 	}
 
 	return h
@@ -35,47 +32,13 @@ func (h *Hub) Run() {
 	for client := range h.registerClientQueue {
 		log.Println("Client Recieved in Hub")
 
-		r := h.findBestRoom()
-
-		r.register <- client
-	}
-}
-
-func (h *Hub) findBestRoom() *Room {
-	maxFill := -1
-	var r *Room
-
-	for _, room := range h.rooms {
-		if room.isOpen() && len(room.clients) > maxFill {
-			r = room
-			maxFill = len(room.clients)
+		if h.room == nil || !h.room.isOpen() {
+			h.room = newRoom(rId, h)
+			go h.room.run()
+			rId++
 		}
-	}
 
-	if r != nil {
-		return r
-	}
-
-	log.Println("New room created")
-
-	r = newRoom(len(h.rooms), h)
-	h.rooms = append(h.rooms, r)
-
-	go r.run()
-
-	return r
-}
-
-func (h *Hub) unregisterRoom(r *Room) {
-	h.roomsMu.Lock()
-	defer h.roomsMu.Unlock()
-
-	for i, room := range h.rooms {
-		if room == r {
-			h.rooms[i] = h.rooms[len(h.rooms)-1]
-			h.rooms = h.rooms[:len(h.rooms)-1]
-			return
-		}
+		h.room.register <- client
 	}
 }
 

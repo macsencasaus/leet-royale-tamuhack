@@ -33,7 +33,8 @@ type Room struct {
 	clients           map[ClientId]*Client
 	activeClientCount int
 
-	state RoomState
+	state  RoomState
+	closed bool
 
 	roundDone chan struct{}
 	done      chan struct{}
@@ -103,8 +104,8 @@ func (r *Room) run() {
 			}
 
 		case <-r.done:
+			r.closed = true
 			r.log("closing")
-			r.hub.unregisterRoom(r)
 			return
 
 		case <-currentRoundTimer.C:
@@ -434,7 +435,7 @@ func (r *Room) isOpen() bool {
 		return false
 	}
 	_, ok := r.state.(waitingForPlayers)
-	return ok
+	return ok && !r.closed
 }
 
 func (r *Room) log(format string, v ...any) {

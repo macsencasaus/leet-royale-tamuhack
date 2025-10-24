@@ -107,7 +107,7 @@ func (c *Client) writePump() {
 				break
 			}
 			c.log("error writing server message to json %v", err)
-			return
+			break
 		}
 
 		switch msg.(type) {
