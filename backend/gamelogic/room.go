@@ -99,7 +99,9 @@ func (r *Room) run() {
 				}
 
 			case m.SkipQuestionMessage, m.SkipLobbyMessage:
-				r.endRound()
+				if r.hub.debug {
+					r.endRound()
+				}
 
 			}
 

@@ -1,16 +1,23 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"leet-guys/gamelogic"
 )
 
 func Serve() {
 	mux := routes()
-	log.Println("listening and serving on 0.0.0.0:8080")
-	http.ListenAndServe("0.0.0.0:8080", mux)
+	port := os.Getenv("LR_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := fmt.Sprintf("0.0.0.0:%s", port)
+	log.Printf("listening and serving on %s", addr)
+	http.ListenAndServe(addr, mux)
 }
 
 func routes() *http.ServeMux {

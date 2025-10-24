@@ -13,6 +13,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { SkipForward } from "lucide-react";
 import Rules from "./rules";
+import { debug } from "@/config";
 
 function Lobby({ force }: { force?: boolean }) {
 	const [lobbyId, setLobbyId] = useState(-1);
@@ -101,14 +102,16 @@ function Lobby({ force }: { force?: boolean }) {
 						{waitTime
 							? `Starting game in ${waitTime}`
 							: "Waiting to begin countdown..."}
-						<Button
-							className="self-end"
-							variant={"outline"}
-							onClick={skipLobby}
-						>
-							<SkipForward />
-							Skip Wait
-						</Button>
+                        {debug && (
+                            <Button
+                                className="self-end"
+                                variant={"outline"}
+                                onClick={skipLobby}
+                            >
+                                <SkipForward />
+                                Skip Wait
+                            </Button>
+                        )}
 					</div>
 				</CardFooter>
 			</Card>

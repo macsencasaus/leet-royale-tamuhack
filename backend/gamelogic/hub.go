@@ -3,6 +3,7 @@ package gamelogic
 import (
 	"log"
 	"net/http"
+	"os"
 
 	m "leet-guys/messages"
 
@@ -16,11 +17,14 @@ type Hub struct {
 	registerClientQueue chan *Client
 
 	room *Room
+
+	debug bool
 }
 
 func NewHub() *Hub {
 	h := &Hub{
 		registerClientQueue: make(chan *Client, ClientsPerRoom*10),
+		debug:               os.Getenv("VITE_LR_DEBUG") != "",
 	}
 
 	return h

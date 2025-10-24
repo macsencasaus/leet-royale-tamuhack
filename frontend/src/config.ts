@@ -1,2 +1,1 @@
-export const debug = true;
-export const demo = true;
+export const debug = import.meta.env.VITE_LR_DEBUG !== undefined;

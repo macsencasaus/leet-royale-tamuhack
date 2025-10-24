@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Loader, Send, SkipForward } from "lucide-react";
 import { Button } from "./ui/button";
 import useWebSocket from "@/hooks/useWebSocket";
-import { demo } from "@/config";
+import { debug } from "@/config";
 
 // const template: Templates = {
 // 	javascript: "// js",
@@ -89,7 +89,7 @@ function EditorPanel() {
 					<TabsTrigger value="cpp">C++</TabsTrigger>
 				</TabsList>
 				<div className="flex gap-2">
-					{demo && (
+					{debug && (
 						<Button
 							variant={"outline"}
 							onClick={skipQuestion}
