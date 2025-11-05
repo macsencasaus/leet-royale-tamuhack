@@ -68,6 +68,7 @@ func (r *Room) run() {
 	r.setWaitingForPlayers()
 
 	currentRoundTimer := time.NewTimer(RoomWait)
+	timerStart := time.Now()
 
 	for {
 		select {
@@ -78,7 +79,8 @@ func (r *Room) run() {
 				r.hub.registerClientQueue <- client
 				continue
 			}
-			if r.registerClient(client) {
+			remainingSec := (RoomWait - time.Since(timerStart)) / time.Second
+			if r.registerClient(client, int(remainingSec)) {
 				// if lobby filled, end countdown early
 				if _, ok := r.state.(waitingForPlayers); ok {
 					r.endRound()
@@ -246,39 +248,6 @@ func (s round4Running) handleSubmitMessage(msg Submit) {
 	}
 }
 
-// runs tests for given submit message, returns whether test passed
-// func (r *Room) runTestRunner(msg m.SubmitMessage, question int) bool {
-// 	var l tr.Language
-// 	switch msg.Language {
-// 	case "python":
-// 		l = tr.Python
-// 	case "javascript":
-// 		l = tr.Javascript
-// 	case "cpp":
-// 		l = tr.CPP
-// 	}
-// 	res, err := tr.RunTest([]byte(msg.Code), l, question)
-// 	if err != nil {
-// 		r.log(err.Error())
-// 	}
-//
-// 	c := r.clients[msg.PlayerId]
-//
-// 	c.send(m.NewTestResultMessage(res))
-//
-// 	correct, total := res.NCorrect()
-// 	passed := correct == total
-//
-// 	r.broadcast(m.NewUpdateClientStateMessage(
-// 		c.playerInfo(),
-// 		passed,
-// 		correct,
-// 		int(time.Now().Unix()),
-// 	))
-//
-// 	return passed
-// }
-
 func (r *Room) nextState() (time.Duration, int) {
 	switch r.state.(type) {
 	case waitingForPlayers:
@@ -335,13 +304,13 @@ func (r *Room) setRound4Running() time.Duration {
 }
 
 // registers client into lobby, returns whether room is full after register
-func (r *Room) registerClient(c *Client) bool {
+func (r *Room) registerClient(c *Client, timeRemaining int) bool {
 	r.broadcast(m.NewClientJoinedMessage(c.playerInfo()))
 
 	c.roomRead = r.roomRead
 	go c.readPump()
 
-	c.send(m.NewRoomGreetingMessage(r.id, r.playersInfo()))
+	c.send(m.NewRoomGreetingMessage(r.id, r.playersInfo(), timeRemaining))
 	r.log("Greeting Message Written")
 
 	c.done = false
@@ -439,7 +408,9 @@ func (r *Room) everyoneDone() bool {
 func (r *Room) playersInfo() []m.PlayerInfo {
 	playersInfo := make([]m.PlayerInfo, 0, len(r.clients))
 	for _, client := range r.clients {
-		playersInfo = append(playersInfo, client.playerInfo())
+		if !client.closed {
+			playersInfo = append(playersInfo, client.playerInfo())
+		}
 	}
 	return playersInfo
 }

@@ -29,6 +29,7 @@ function Lobby({ force }: { force?: boolean }) {
             case "ServerMessageRoomGreeting":
                 setLobbyId(message.lobbyId);
                 setOthers(message.otherPlayers);
+                setWaitTime(message.waitRemaining);
                 break;
             case "ServerMessageClientJoined":
                 setOthers((prev) => [message.player, ...prev]);
@@ -36,11 +37,18 @@ function Lobby({ force }: { force?: boolean }) {
             case "ServerMessageClientLeft":
                 setOthers((prev) => prev.filter((player) => player.id != message.player.id));
                 break;
-            case "ServerMessageCountdown":
-                setWaitTime(message.count);
-                break;
         }
     }, []);
+
+    useEffect(() => {
+        if (waitTime === undefined) return;
+
+        const timer = setTimeout(() => {
+            setWaitTime((prev) => (prev !== undefined ? prev - 1 : undefined));
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [waitTime]);
 
     const { gameState, player, sendMessage } = useWebSocket(onMessage);
 

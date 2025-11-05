@@ -11,6 +11,7 @@ import useWebSocket from "@/hooks/useWebSocket";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import Rules from "./rules";
+import { ws_scheme } from "@/config";
 
 function Login() {
     const { gameState, createWebSocket } = useWebSocket();
@@ -18,7 +19,7 @@ function Login() {
 
     function connect(ev: any) {
         ev.preventDefault();
-        const address = `ws://${window.location.host}/ws?name=${name}`;
+        const address = `${ws_scheme}://${window.location.host}/ws?name=${name}`;
         console.log(`Sending connection request to ${address}`);
         createWebSocket(address);
     }

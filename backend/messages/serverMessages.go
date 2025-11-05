@@ -40,16 +40,22 @@ func NewHubGreetingMessage(p PlayerInfo) HubGreetingMessage {
 func (m HubGreetingMessage) serverMessage() {}
 
 type RoomGreetingMessage struct {
-	Type         ServerMessageType `json:"type"`
-	LobbyId      int               `json:"lobbyId"`
-	OtherPlayers []PlayerInfo      `json:"otherPlayers"`
+	Type          ServerMessageType `json:"type"`
+	LobbyId       int               `json:"lobbyId"`
+	OtherPlayers  []PlayerInfo      `json:"otherPlayers"`
+	WaitRemaining int               `json:"waitRemaining"`
 }
 
-func NewRoomGreetingMessage(lobbyId int, otherPlayers []PlayerInfo) RoomGreetingMessage {
+func NewRoomGreetingMessage(
+	lobbyId int,
+	otherPlayers []PlayerInfo,
+	waitRemaining int,
+) RoomGreetingMessage {
 	return RoomGreetingMessage{
-		Type:         ServerMessageTypeRoomGreeting,
-		LobbyId:      lobbyId,
-		OtherPlayers: otherPlayers,
+		Type:          ServerMessageTypeRoomGreeting,
+		LobbyId:       lobbyId,
+		OtherPlayers:  otherPlayers,
+		WaitRemaining: waitRemaining,
 	}
 }
 func (m RoomGreetingMessage) serverMessage() {}

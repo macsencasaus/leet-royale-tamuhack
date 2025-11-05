@@ -29,6 +29,7 @@ export interface Message {
     otherPlayers: Player[];
     count: number;
 
+    waitRemaining: number;
     questionId: number;
     round: number;
     time: number; // seconds
