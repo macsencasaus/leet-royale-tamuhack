@@ -13,7 +13,7 @@ type ClientId = int
 const ClientsPerRoom = 40
 
 const (
-	RoomWait   = 60 * time.Second  // 1 minute
+	RoomWait   = 30 * time.Second  // 1 minute
 	Round1Time = 300 * time.Second // 5 minutes
 	Round2Time = 300 * time.Second // 5 minutes
 	Round3Time = 300 * time.Second // 5 minutes
