@@ -268,8 +268,9 @@ func RunProblemTest(fileContent []byte, lang Language, magic int64) (Result, err
 
 func RunTest(infile []byte, lang Language, question int) (Result, error) {
 	magic := generateMagic()
-	magicString := fmt.Sprintf("%d", magic)
+	// magicString := fmt.Sprintf("%d", magic)
 
-	file := []byte(generate(string(infile), lang, magicString, question))
-	return RunProblemTest(file, lang, magic)
+	// file := []byte(generate(string(infile), lang, magicString, question))
+	// return RunProblemTest(file, lang, magic)
+	return RunProblemTest(nil, lang, magic)
 }
